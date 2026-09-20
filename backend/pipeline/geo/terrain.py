@@ -232,7 +232,7 @@ def distance_to_coast_km(
 
     out = np.empty(len(lats), dtype=float)
     for i, (lat, lon) in enumerate(zip(lats, lons, strict=True)):
-        key = int(round(float(lat)))
+        key = round(float(lat))
         coast_lon = table.get(key)
         if coast_lon is None:
             nearest = min(table, key=lambda k: abs(k - key))
