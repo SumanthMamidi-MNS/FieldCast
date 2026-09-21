@@ -41,6 +41,26 @@ def _chunk(seq: list, size: int) -> list[list]:
     return [seq[i : i + size] for i in range(0, len(seq), size)]
 
 
+class ApiBudgetExceeded(RuntimeError):
+    """Open-Meteo's hourly or daily free-tier budget is spent.
+
+    Not retried: waiting minutes inside a pipeline run helps nobody. Everything
+    fetched so far is cached, so re-running after the budget resets resumes where
+    this run stopped.
+    """
+
+
+# Open-Meteo counts each location in a batch as a call (and each ~2 weeks of data
+# per location as another), against 600/minute. Pace calls by their weight so a
+# long run stays under the minutely limit instead of tripping it.
+_MINUTELY_BUDGET = 600
+_PACE_S_PER_WEIGHT = 60.0 / (_MINUTELY_BUDGET * 0.8)
+
+
+def _pace(weight: float) -> None:
+    time.sleep(max(INTER_CALL_DELAY_S, weight * _PACE_S_PER_WEIGHT))
+
+
 @retry(
     retry=retry_if_exception_type((httpx.HTTPError,)),
     wait=wait_exponential(multiplier=1, min=1, max=30),
@@ -48,7 +68,21 @@ def _chunk(seq: list, size: int) -> list[list]:
     reraise=True,
 )
 def _http_get_json(url: str, params: dict) -> dict | list:
-    resp = httpx.get(url, params=params, timeout=60)
+    resp = httpx.get(url, params=params, timeout=120)
+    if resp.status_code == 429:
+        reason = ""
+        try:
+            reason = str(resp.json().get("reason", ""))
+        except ValueError:
+            reason = resp.text[:200]
+        if "Minutely" in reason or not reason:
+            # Short-window limit: wait it out, then let tenacity retry.
+            time.sleep(61)
+            resp.raise_for_status()
+        raise ApiBudgetExceeded(
+            f"Open-Meteo budget exhausted ({reason.strip()}). Cached data is kept; "
+            "re-run after the limit resets to resume."
+        )
     resp.raise_for_status()
     return resp.json()
 
@@ -71,7 +105,11 @@ def _fetch_weather_chunk(
     key = make_key(url, params)
 
     def do_fetch() -> list:
-        time.sleep(INTER_CALL_DELAY_S)
+        days = (
+            pd.Timestamp(extra_params.get("end_date", "2000-01-14"))
+            - pd.Timestamp(extra_params.get("start_date", "2000-01-01"))
+        ).days + 1
+        _pace(len(lats) * max(1.0, days / 14.0))
         result = _http_get_json(url, params)
         # Open-Meteo returns a single object (not a list) when only one point is
         # requested; normalise to a list so downstream code has one shape to handle.
@@ -163,8 +201,8 @@ def fetch_elevation(lats: list[float], lons: list[float]) -> pd.DataFrame:
         }
         key = make_key(ELEVATION_URL, params)
 
-        def do_fetch(p=params) -> dict:
-            time.sleep(INTER_CALL_DELAY_S)
+        def do_fetch(p=params, n=len(lat_chunk)) -> dict:
+            _pace(n)
             return _http_get_json(ELEVATION_URL, p)
 
         result = get_or_fetch(key, do_fetch)

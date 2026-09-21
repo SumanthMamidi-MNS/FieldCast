@@ -195,12 +195,37 @@ def test_leakage_assertion_catches_a_spatial_leak():
         assert_no_leakage(shared, shared, shared.iloc[0:0])
 
 
-def test_leakage_assertion_catches_a_temporal_leak():
-    train = pd.DataFrame({"block_id": ["B1"], "date": pd.to_datetime(["2022-01-01"])})
+def test_leakage_assertion_catches_a_shared_date():
+    """The real leak: the same day appears in train and test."""
+    train = pd.DataFrame({"block_id": ["B1"], "date": pd.to_datetime(["2022-06-01"])})
     valid = pd.DataFrame({"block_id": ["B2"], "date": pd.to_datetime(["2021-01-01"])})
     test = pd.DataFrame({"block_id": ["B3"], "date": pd.to_datetime(["2022-06-01"])})
     with pytest.raises(AssertionError, match="temporal leak"):
         assert_no_leakage(train, valid, test)
+
+
+def test_leakage_assertion_enforces_an_embargo_gap():
+    """Adjacent days leak: weather is autocorrelated across the boundary."""
+    train = pd.DataFrame({"block_id": ["B1"], "date": pd.to_datetime(["2022-06-01"])})
+    valid = pd.DataFrame({"block_id": ["B2"], "date": pd.to_datetime(["2021-01-01"])})
+    test = pd.DataFrame({"block_id": ["B3"], "date": pd.to_datetime(["2022-06-02"])})
+    with pytest.raises(AssertionError, match="autocorrelated"):
+        assert_no_leakage(train, valid, test, embargo_days=3)
+
+
+def test_sufficient_embargo_gap_is_accepted():
+    train = pd.DataFrame({"block_id": ["B1"], "date": pd.to_datetime(["2022-06-01"])})
+    valid = pd.DataFrame({"block_id": ["B2"], "date": pd.to_datetime(["2021-01-01"])})
+    test = pd.DataFrame({"block_id": ["B3"], "date": pd.to_datetime(["2022-06-10"])})
+    assert_no_leakage(train, valid, test, embargo_days=3)
+
+
+def test_a_different_year_is_still_a_valid_holdout():
+    """Year-based holdouts remain acceptable under the date-level check."""
+    train = pd.DataFrame({"block_id": ["B1"], "date": pd.to_datetime(["2021-06-01"])})
+    valid = pd.DataFrame({"block_id": ["B2"], "date": pd.to_datetime(["2021-01-01"])})
+    test = pd.DataFrame({"block_id": ["B3"], "date": pd.to_datetime(["2022-06-01"])})
+    assert_no_leakage(train, valid, test)
 
 
 def test_clean_split_passes_the_leakage_assertion():
@@ -282,3 +307,25 @@ def test_feature_table_reports_non_intersecting_coordinates():
     wl["lat"] = wl["lat"] + 10.0
     with pytest.raises(ValueError, match="did not intersect"):
         build_feature_table(wl, points, points, "tmax")
+
+
+def test_empty_test_years_means_no_year_holdout_not_the_default():
+    """An empty tuple is a real value: "hold out no years".
+
+    A falsy `or` check here silently substituted the default test years, which
+    sent every row into the test split and left nothing to train on.
+    """
+    points = _sample_points(n_blocks=10)
+    panel = add_block_context(_sample_panel(points, days=5))
+    train, valid, test = spatial_temporal_split(panel, test_years=())
+    assert len(test) == 0
+    assert len(train) > 0 and len(valid) > 0
+
+
+def test_none_test_years_falls_back_to_the_configured_default():
+    points = _sample_points(n_blocks=10)
+    panel = add_block_context(_sample_panel(points, days=5))
+    train, _valid, test = spatial_temporal_split(panel, test_years=None)
+    # Sample data is 2021, default test years are 2022-2023, so nothing is test.
+    assert len(test) == 0
+    assert len(train) > 0

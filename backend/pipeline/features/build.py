@@ -174,7 +174,11 @@ def spatial_temporal_split(
 
     Returns (train, valid, test).
     """
-    test_years = test_years or TRAINING_WINDOW.test_years
+    # `is None` rather than a falsy check: an empty tuple is a meaningful value
+    # here (no year-based holdout at all) and `or` would silently replace it with
+    # the default, sending every row into the test split.
+    if test_years is None:
+        test_years = TRAINING_WINDOW.test_years
     out = df.copy()
     years = pd.to_datetime(out[date_col]).dt.year
 
@@ -196,6 +200,7 @@ def assert_no_leakage(
     test: pd.DataFrame,
     block_col: str = "block_id",
     date_col: str = "date",
+    embargo_days: int = 3,
 ) -> None:
     """Fail loudly if the holdouts are not actually held out.
 
@@ -212,11 +217,31 @@ def assert_no_leakage(
             f"e.g. {sorted(overlap)[:3]}"
         )
 
-    train_years = set(pd.to_datetime(train[date_col]).dt.year)
-    test_years = set(pd.to_datetime(test[date_col]).dt.year)
-    year_overlap = train_years & test_years
-    if year_overlap:
-        raise AssertionError(f"temporal leak: years {sorted(year_overlap)} in both train and test")
+    if len(test) == 0:
+        return
+
+    # Check dates, not years. Years are too coarse: a legitimate within-year
+    # cutoff split (used by the quick run) shares a year without sharing a single
+    # day, and would fail a year-level check for no reason.
+    train_dates = set(pd.to_datetime(train[date_col]).unique())
+    test_dates = set(pd.to_datetime(test[date_col]).unique())
+    date_overlap = train_dates & test_dates
+    if date_overlap:
+        raise AssertionError(
+            f"temporal leak: {len(date_overlap)} date(s) in both train and test, "
+            f"e.g. {sorted(date_overlap)[:3]}"
+        )
+
+    # Weather is autocorrelated across adjacent days, so a test set starting the
+    # morning after training ends still leaks. Require a gap.
+    if train_dates:
+        gap = (min(test_dates) - max(train_dates)).days
+        if 0 < gap < embargo_days:
+            raise AssertionError(
+                f"temporal leak: only {gap} day(s) between the end of training and the "
+                f"start of testing; {embargo_days} required because weather is "
+                f"autocorrelated across adjacent days"
+            )
 
 
 def build_feature_table(

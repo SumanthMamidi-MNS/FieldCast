@@ -212,13 +212,18 @@ def build_panchayat_units(region: Region, blocks: gpd.GeoDataFrame) -> gpd.GeoDa
             "or the region's blocks failed to load correctly."
         )
 
-    villages = villages.to_crs(blocks.crs)
+    # The state is split across several datameet files, so the concatenated index
+    # repeats. A unique index is required for the label-based join below.
+    villages = villages.to_crs(blocks.crs).reset_index(drop=True)
     village_points = villages.copy()
     village_points["geometry"] = village_points.geometry.representative_point()
 
     joined = gpd.sjoin(
         village_points, blocks[["block_id", "geometry"]], how="inner", predicate="within"
     )
+    # A village sitting on a shared block edge can match two (slightly overlapping)
+    # GADM polygons. Assign it to exactly one block, deterministically.
+    joined = joined[~joined.index.duplicated(keep="first")]
     matched_ids = set(joined.index)
     villages_in_region = villages.loc[villages.index.isin(matched_ids)].copy()
     villages_in_region["block_id"] = joined.loc[villages_in_region.index, "block_id"]

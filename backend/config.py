@@ -166,10 +166,35 @@ TERRAIN_STENCIL_M = 1000.0
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
 class TrainingWindow:
-    start: str = "2018-01-01"
-    end: str = "2023-12-31"
-    # Whole years held out temporally, on top of the spatial block holdout.
-    test_years: tuple[int, ...] = field(default=(2022, 2023))
+    """Seasonal training windows.
+
+    Monsoon seasons only (June-September). Open-Meteo's free tier counts each
+    location-fortnight as one call against a ~10k/day budget, so six full years at
+    the ~9km spacing needed for within-block variance (~108k calls) is not
+    feasible. The monsoon is also when rainfall advisories matter most and where
+    the rain-shadow gradient is strongest. Out-of-season requests are served but
+    flagged as lower support (see app services).
+    """
+
+    # One training season and one held-out test season. A third season (2021)
+    # can be appended when the API budget allows; the cache makes that additive.
+    seasons: tuple[tuple[str, str], ...] = (
+        ("2022-06-01", "2022-09-30"),
+        ("2023-06-01", "2023-09-30"),
+    )
+    test_years: tuple[int, ...] = field(default=(2023,))
+    # Grid spacing (degrees). ~16km gives ~3 fine points per block, the minimum
+    # for a non-degenerate within-block anomaly, while fitting the call budget.
+    grid_step_deg: float = 0.15
+    months: tuple[int, ...] = (6, 7, 8, 9)
+
+    @property
+    def start(self) -> str:
+        return self.seasons[0][0]
+
+    @property
+    def end(self) -> str:
+        return self.seasons[-1][1]
 
 
 TRAINING_WINDOW = TrainingWindow()
