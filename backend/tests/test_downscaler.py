@@ -147,7 +147,7 @@ def test_model_beats_naive_baseline_on_known_signal():
 
 
 def test_predictions_are_differentiated_within_a_block():
-    """PRD §9 criterion 1: panchayats in one block must not all get the same number."""
+    """success criterion 1: panchayats in one block must not all get the same number."""
     df = _synthetic_temperature()
     train, valid, _ = _split(df)
 

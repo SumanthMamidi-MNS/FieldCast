@@ -145,7 +145,7 @@ def _enforce_monotonic(quantiles: dict[float, np.ndarray]) -> dict[float, np.nda
 def differentiation_spread(values: np.ndarray) -> float:
     """Max-min across panchayats: the evidence that downscaling did something.
 
-    PRD §9 criterion 1. If this is ~0 the system returned the block value with
+    success criterion 1. If this is ~0 the system returned the block value with
     extra steps, and the API says so rather than dressing it up.
     """
     values = np.asarray(values, dtype=float)

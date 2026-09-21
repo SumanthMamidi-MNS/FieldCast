@@ -6,7 +6,7 @@ locations the model has never seen anything like. A LightGBM model asked about a
 1400m windward ridge when it only ever trained on 600m plateau will answer with a
 narrow, confident, wrong interval, because tree models extrapolate as a constant.
 
-That failure mode is precisely what PRD §7 warns against: false precision driving
+That failure mode is precisely what the core design tension (architecture.md §0) warns against: false precision driving
 a real farming decision. So we compute support separately and let it widen the
 interval and downgrade the advisory.
 

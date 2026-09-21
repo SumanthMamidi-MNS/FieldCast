@@ -17,7 +17,7 @@ So the split is deliberate:
   tens of thousands of training rows and real terrain-driven variance.
 
 - **Validate on real GHCN gauges (T2), which the model never sees in training.**
-  This is the number that actually answers PRD §9. It is a true out-of-sample test
+  This is the number that actually answers the success criteria (architecture.md §0). It is a true out-of-sample test
   against instruments, not against our own training signal.
 
 ## Leakage control

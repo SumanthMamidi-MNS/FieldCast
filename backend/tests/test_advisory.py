@@ -3,7 +3,7 @@
 The behaviour worth protecting here is the asymmetric-cost rule: low confidence
 must make advice MORE conservative. A regression that silently flips this would
 produce confident-sounding advice in exactly the places we know least about,
-which is the specific failure PRD §7 warns against.
+which is the specific failure the core design tension (architecture.md §0) warns against.
 """
 
 from __future__ import annotations

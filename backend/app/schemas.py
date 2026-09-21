@@ -2,7 +2,7 @@
 
 The central design commitment: a downscaled value is NEVER returned as a bare
 number. Every value carries (a) a predictive interval, (b) the validation tier it
-came from, and (c) a plain-language support label. PRD §4 and §9 require this —
+came from, and (c) a plain-language support label. The uncertainty requirement (architecture.md §0) demands this —
 a confident-looking wrong forecast drives a real and costly farming decision.
 """
 
@@ -114,7 +114,7 @@ class Advisory(BaseModel):
     """Plain-language guidance derived from the downscaled variables.
 
     This is the layer that makes the system usable by an extension officer rather
-    than only evaluable as a benchmark (PRD §6).
+    than only evaluable as a benchmark (the extension-officer usability goal).
     """
 
     headline: str
@@ -144,7 +144,7 @@ class BlockForecastResponse(BaseModel):
 
 
 class Differentiation(BaseModel):
-    """Evidence that downscaling actually did something (PRD §9, criterion 1).
+    """Evidence that downscaling actually did something (success criterion 1).
 
     If spread is ~0 the system has added nothing, and we say so rather than
     presenting identical numbers as if they were insight.

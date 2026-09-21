@@ -1,7 +1,7 @@
 """Agro-meteorological advisory generation.
 
 Turns downscaled numbers into the sentence an extension officer actually says to
-a farmer. PRD §6 sets the bar: the system must be usable by an advisory officer,
+a farmer. The bar is usability by an extension officer: the system must be usable by an advisory officer,
 not merely evaluable as a benchmark.
 
 Two design commitments that are easy to get wrong:
@@ -324,7 +324,7 @@ def _headline(variables: dict[str, VariableForecast], items: list[AdvisoryItem])
 def _uncertainty_statement(
     variables: dict[str, VariableForecast], support: SupportLevel
 ) -> str:
-    """Always present, never buried. This is PRD §7 made literal."""
+    """Always present, never buried. This is the core design tension (architecture.md §0) made literal."""
     if not variables:
         return (
             "No forecast variables were available for this panchayat, so no confidence "

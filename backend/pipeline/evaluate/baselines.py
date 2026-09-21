@@ -16,7 +16,7 @@ from backend.config import LAPSE_RATE_C_PER_M
 
 
 def naive_block_copy(block_value: np.ndarray) -> np.ndarray:
-    """B0: every panchayat gets the block value. The bar PRD §9 sets."""
+    """B0: every panchayat gets the block value. The bar the success criteria (architecture.md §0) sets."""
     return np.asarray(block_value, dtype=float).copy()
 
 
@@ -49,7 +49,7 @@ def idw_interpolation(
     """B1: inverse-distance weighting from neighbouring block centroids.
 
     This is the classical GIS answer to "make the coarse field finer", and it
-    encodes precisely the smoothness assumption PRD §7 identifies as false for
+    encodes precisely the smoothness assumption the core design tension (architecture.md §0) identifies as false for
     rainfall. It is included because it is what a reviewer will ask about, and
     because beating it on rainfall specifically is the interesting result.
     """

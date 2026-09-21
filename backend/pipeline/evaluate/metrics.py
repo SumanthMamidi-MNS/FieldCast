@@ -3,7 +3,7 @@
 The metric set is chosen so that a model cannot look good by cheating in the ways
 this particular problem invites:
 
-- **Skill score vs the naive baseline** is the headline, because PRD §9 names
+- **Skill score vs the naive baseline** is the headline, because the success criteria (architecture.md §0) names
   "beats copying the block value" as the actual proof. An absolute MAE is
   meaningless here — rainfall MAE of 3mm is excellent in Marathwada and terrible
   in Mahabaleshwar.

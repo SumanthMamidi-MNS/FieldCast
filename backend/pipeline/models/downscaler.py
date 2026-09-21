@@ -11,7 +11,7 @@ Three design choices carry the whole thing:
 2. **Rainfall is two-stage.** A single regressor trained on rainfall minimises
    error by predicting something near the conditional mean everywhere, which
    smears light drizzle across every panchayat in the block. That is the exact
-   false-smoothness failure PRD §7 names. Splitting occurrence from amount lets
+   false-smoothness failure the core design tension (architecture.md §0) names. Splitting occurrence from amount lets
    the model say "dry here, 40mm one valley over", which is what actually happens.
 
 3. **Rainfall amount is learned in log-ratio space.** Rainfall is heavy-tailed and
