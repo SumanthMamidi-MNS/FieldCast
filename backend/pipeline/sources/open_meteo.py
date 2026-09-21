@@ -51,10 +51,11 @@ class ApiBudgetExceeded(RuntimeError):
 
 
 # Open-Meteo counts each location in a batch as a call (and each ~2 weeks of data
-# per location as another), against 600/minute. Pace calls by their weight so a
-# long run stays under the minutely limit instead of tripping it.
-_MINUTELY_BUDGET = 600
-_PACE_S_PER_WEIGHT = 60.0 / (_MINUTELY_BUDGET * 0.8)
+# per location as another), against 600/minute and 5,000/hour. The hourly limit is
+# the binding one for a training run, so pace to ~85% of it: slow, but a run that
+# finishes beats a fast one that aborts part-way.
+_HOURLY_BUDGET = 5000
+_PACE_S_PER_WEIGHT = 3600.0 / (_HOURLY_BUDGET * 0.85)
 
 
 def _pace(weight: float) -> None:
