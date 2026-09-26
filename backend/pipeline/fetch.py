@@ -37,6 +37,8 @@ def run(
     ordered = [s for s in ordered if s.test] + sorted(
         [s for s in ordered if not s.test], key=lambda s: s.start, reverse=True
     )
+    # Historical gauge seasons last: they only feed evaluation and calibration.
+    ordered += list(TRAINING_WINDOW.gauge_seasons)
     for key in region:
         blocks = gpd.read_parquet(PROCESSED_DIR / f"blocks_{REGIONS[key].key}.parquet")
         points = build_grid_for_region(blocks, step_deg=step_deg)

@@ -224,10 +224,29 @@ def train_region(
         table.to_parquet(PROCESSED_DIR / f"features_{region.key}_{key}.parquet", index=False)
 
     _fit_and_save_support(points, artifact_root)
+    if not quick:
+        build_gauge_tables(region, points)
     points.to_parquet(PROCESSED_DIR / f"grid_{region.key}.parquet", index=False)
 
     (artifact_root / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
+
+
+def build_gauge_tables(region: Region, points: pd.DataFrame) -> None:
+    """Block values for the historical gauge seasons, one table per variable.
+
+    These seasons are only used to score and calibrate against real gauges, so
+    they are written to separate `features_hist_*` tables that training never
+    reads.
+    """
+    seasons = tuple((s.start, s.end) for s in TRAINING_WINDOW.gauge_seasons)
+    if not seasons:
+        return
+    panel = assemble_panel(points, fetch_weather_panel(points, seasons))
+    for key in VARIABLES:
+        variable_table(panel, key).to_parquet(
+            PROCESSED_DIR / f"features_hist_{region.key}_{key}.parquet", index=False
+        )
 
 
 def build_features_only(
@@ -247,6 +266,7 @@ def build_features_only(
         table = variable_table(panel, key)
         table.to_parquet(PROCESSED_DIR / f"features_{region.key}_{key}.parquet", index=False)
         counts[key] = len(table)
+    build_gauge_tables(region, points)
     return counts
 
 

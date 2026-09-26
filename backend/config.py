@@ -206,6 +206,19 @@ class TrainingWindow:
         Season("2022-10-05", "2023-05-31", "dry", test=True),
         Season("2023-06-01", "2023-09-30", "monsoon", test=True),
     )
+    # Historical gauge seasons. India's older station network ended around 1970,
+    # leaving ~100 gauges per state with dense monsoon records in 1956-61 versus
+    # only 4 today. The reanalysis covers those years, so they give a far larger
+    # real-gauge test. Never used for training: 1958-59 calibrate the
+    # point-scale interval factor, 1960-61 are the historical gauge test.
+    gauge_calibration_seasons: tuple[Season, ...] = (
+        Season("1958-06-01", "1958-09-30", "monsoon"),
+        Season("1959-06-01", "1959-09-30", "monsoon"),
+    )
+    gauge_test_seasons: tuple[Season, ...] = (
+        Season("1960-06-01", "1960-09-30", "monsoon", test=True),
+        Season("1961-06-01", "1961-09-30", "monsoon", test=True),
+    )
     # Grid spacing (degrees). ~16km gives ~3.5 fine points per block, the minimum
     # for a non-degenerate within-block anomaly, while fitting the call budget.
     grid_step_deg: float = 0.15
@@ -221,6 +234,10 @@ class TrainingWindow:
     @property
     def test_periods(self) -> tuple[tuple[str, str], ...]:
         return tuple((s.start, s.end) for s in self.test_seasons)
+
+    @property
+    def gauge_seasons(self) -> tuple[Season, ...]:
+        return self.gauge_calibration_seasons + self.gauge_test_seasons
 
     @property
     def start(self) -> str:

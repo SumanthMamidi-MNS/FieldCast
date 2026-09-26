@@ -162,7 +162,7 @@ def evaluation(region: str = Query(PRIMARY_REGION)) -> list[BaselineComparison]:
         raise HTTPException(404, f"no evaluation report for {region!r}; run the evaluation first")
     report = json.loads(path.read_text(encoding="utf-8"))
     out = []
-    for tier in ("T1", "T2"):
+    for tier in ("T1", "T2", "T2_hist"):
         for r in report.get(tier, {}).values():
             out.append(
                 BaselineComparison(
@@ -174,8 +174,8 @@ def evaluation(region: str = Query(PRIMARY_REGION)) -> list[BaselineComparison]:
                     skill_score=r["skill_vs_naive"],
                     interval_coverage=r["interval_coverage_80"],
                     n_observations=r["n"],
-                    tier=Tier(tier),
-                    region=region,
+                    tier=Tier("T2" if tier == "T2_hist" else tier),
+                    region=f"{region} (1960-61 gauges)" if tier == "T2_hist" else region,
                 )
             )
     return out

@@ -329,11 +329,17 @@ def gauge_datasets(
     for key, var in VARIABLES.items():
         if var.ghcn_element is None or key not in predictor.models:
             continue
-        table_path = PROCESSED_DIR / f"features_{region_key}_{key}.parquet"
-        if not table_path.exists():
+        paths = [
+            PROCESSED_DIR / f"features_{region_key}_{key}.parquet",
+            PROCESSED_DIR / f"features_hist_{region_key}_{key}.parquet",
+        ]
+        paths = [p for p in paths if p.exists()]
+        if not paths:
             continue
         bvals = (
-            pd.read_parquet(table_path, columns=["block_id", "date", "block_value"])
+            pd.concat(
+                [pd.read_parquet(p, columns=["block_id", "date", "block_value"]) for p in paths]
+            )
             .groupby(["block_id", "date"])["block_value"]
             .first()
             .reset_index()
@@ -436,8 +442,11 @@ def write_markdown(report: dict, path) -> None:
         "Coverage is for the published 80% interval (target ≈ 0.80).",
         "",
     ]
-    for tier, title in (("T1", "T1 — held-out season, dense field (~16 km)"),
-                        ("T2", "T2 — real GHCN rain gauges (never used in training)")):
+    for tier, title in (
+        ("T1", "T1 — held-out seasons, dense field (~16 km)"),
+        ("T2", "T2 — real gauges, held-out 2022-23 seasons (never used in training)"),
+        ("T2_hist", "T2 (historical) — real gauges, 1960-61 monsoons (~100 gauges, never used in training)"),
+    ):
         res = report.get(tier, {})
         lines += [f"## {title}", ""]
         if not res:
@@ -493,7 +502,15 @@ def run(
     transfer = model_region != region
 
     test_periods = TRAINING_WINDOW.test_periods
-    calib_periods = tuple((s.start, s.end) for s in TRAINING_WINDOW.train_seasons)
+    hist_test = tuple((s.start, s.end) for s in TRAINING_WINDOW.gauge_test_seasons)
+    # Calibrate on the historical gauge seasons (~100 gauges) when their block
+    # values exist; fall back to the training seasons' few modern gauges.
+    has_hist = any(PROCESSED_DIR.glob(f"features_hist_{region}_*.parquet"))
+    calib_periods = (
+        tuple((s.start, s.end) for s in TRAINING_WINDOW.gauge_calibration_seasons)
+        if has_hist
+        else tuple((s.start, s.end) for s in TRAINING_WINDOW.train_seasons)
+    )
     calib_path = ARTIFACT_DIR / model_region / "scale_calibration.json"
 
     # Calibration is fitted only on the model's own region, on seasons outside the
@@ -515,6 +532,7 @@ def run(
         "scale_calibration": predictor.scale_calibration,
         "T1": evaluate_t1(region, predictor, transfer),
         "T2": evaluate_t2(region, predictor, test_periods),
+        "T2_hist": evaluate_t2(region, predictor, hist_test) if has_hist else {},
     }
 
     stem = f"evaluation_{region}" + (f"_from_{model_region}" if transfer else "")
@@ -524,8 +542,8 @@ def run(
     table = Table(title=f"Skill vs naive — {region}")
     for c in ("tier", "variable", "n", "skill", "90% CI", "coverage", "verdict"):
         table.add_column(c)
-    for tier in ("T1", "T2"):
-        for r in report[tier].values():
+    for tier in ("T1", "T2", "T2_hist"):
+        for r in report.get(tier, {}).values():
             table.add_row(
                 tier, r["variable"], f"{r['n']:,}", _fmt(r["skill_vs_naive"]),
                 f"[{_fmt(r['skill_ci90'][0])}, {_fmt(r['skill_ci90'][1])}]",
