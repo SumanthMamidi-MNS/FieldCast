@@ -25,6 +25,7 @@ from sklearn.cluster import KMeans
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from backend.config import GEOGRAPHIC_CRS, METRIC_CRS, PROCESSED_DIR, RAW_DIR, Region
+from backend.pipeline.geo.gram_panchayats import assign_gram_panchayats
 from backend.pipeline.sources.cache import OfflineCacheMiss, get_or_fetch, is_offline, make_key
 
 logger = logging.getLogger(__name__)
@@ -133,6 +134,11 @@ def load_village_polygons(region: Region) -> gpd.GeoDataFrame:
             "village_name": combined.get("NAME", pd.Series(["unknown"] * len(combined))),
             "district": combined.get("DISTRICT", pd.Series([None] * len(combined))),
             "state": combined.get("STATE", pd.Series([None] * len(combined))),
+            # Sub-district (taluka) and 2001 census code, used to join villages to
+            # their real gram panchayats (see geo.gram_panchayats). Column names
+            # differ between the Maharashtra and Karnataka files.
+            "subdistrict": combined.get("SUB_DIST", combined.get("TALUK", pd.Series([None] * len(combined)))),
+            "cen_2001": combined.get("CEN_2001", pd.Series([None] * len(combined))).astype("string"),
             "geometry": combined["geometry"],
         },
         crs=combined.crs,
@@ -193,6 +199,36 @@ def _cluster_villages_in_block(
     return result
 
 
+def _dissolve_gram_panchayats(villages: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """One unit per (block, gram panchayat) from villages already matched via LGD.
+
+    Grouped by block as well as panchayat code: the rare panchayat straddling a
+    block boundary is split, because every unit must sit inside one block for
+    block-mean reconciliation to be meaningful.
+    """
+    if villages.empty:
+        return gpd.GeoDataFrame(columns=["geometry"], geometry="geometry", crs=METRIC_CRS)
+    projected = villages.to_crs(METRIC_CRS)
+    rows = []
+    for (block_id, gp_code), grp in projected.groupby(["block_id", "gp_code"]):
+        dissolved = grp.union_all()
+        c = dissolved.centroid
+        rows.append(
+            {
+                "panchayat_id": f"{block_id}__gp{gp_code}",
+                "block_id": block_id,
+                "name": str(grp["gp_name"].iloc[0]),
+                "n_villages": len(grp),
+                "area_km2": float(grp.geometry.area.sum() / 1e6),
+                "geometry": dissolved,
+                "_centroid_x": c.x,
+                "_centroid_y": c.y,
+                "unit_type": "gram_panchayat",
+            }
+        )
+    return gpd.GeoDataFrame(rows, geometry="geometry", crs=METRIC_CRS)
+
+
 def build_panchayat_units(region: Region, blocks: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Build panchayat-proxy units for a region: villages clipped to blocks, clustered.
 
@@ -234,11 +270,24 @@ def build_panchayat_units(region: Region, blocks: gpd.GeoDataFrame) -> gpd.GeoDa
             "the spatial join. Refusing to fall back to synthetic geometry."
         )
 
-    cluster_frames = []
-    for block_id, group in villages_in_region.groupby("block_id"):
-        cluster_frames.append(_cluster_villages_in_block(group.reset_index(drop=True), block_id))
+    assignment = assign_gram_panchayats(villages_in_region, region)
+    villages_in_region = villages_in_region.join(assignment)
+    matched = villages_in_region["gp_code"].notna()
+    if matched.any():
+        rate = matched.mean()
+        methods = villages_in_region.loc[matched, "match_method"].value_counts().to_dict()
+        print(f"  LGD: {matched.sum()} of {len(matched)} villages ({rate:.0%}) matched to real gram panchayats {methods}")
 
-    panchayats = pd.concat(cluster_frames, ignore_index=True)
+    frames = []
+    gp_units = _dissolve_gram_panchayats(villages_in_region[matched])
+    if not gp_units.empty:
+        frames.append(gp_units)
+    for block_id, group in villages_in_region[~matched].groupby("block_id"):
+        clusters = _cluster_villages_in_block(group.reset_index(drop=True), block_id)
+        clusters["unit_type"] = "village_cluster"
+        frames.append(clusters)
+
+    panchayats = pd.concat(frames, ignore_index=True)
     panchayats = gpd.GeoDataFrame(panchayats, geometry="geometry", crs=METRIC_CRS)
     panchayats = panchayats.to_crs(GEOGRAPHIC_CRS)
 

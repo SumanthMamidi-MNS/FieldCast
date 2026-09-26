@@ -143,6 +143,7 @@ def panchayat_geometries(region_key: str, block_id: str) -> list[PanchayatGeomet
             PanchayatGeometry(
                 panchayat_id=p["panchayat_id"],
                 panchayat_name=str(p["name"]),
+                unit_type=str(p.get("unit_type", "village_cluster")),
                 block_id=block_id,
                 geometry=gpd.GeoSeries([p.geometry]).__geo_interface__["features"][0]["geometry"],
                 centroid_lat=float(p["centroid_lat"]),
@@ -251,7 +252,9 @@ def block_forecast(
 
     targets = pd.concat(
         [
-            sub[["panchayat_id", "name", "block_id", "area_km2"]],
+            sub[["panchayat_id", "name", "block_id", "area_km2"]].assign(
+                unit_type=sub.get("unit_type", "village_cluster")
+            ),
             sub[["centroid_lat", "centroid_lon"]].rename(
                 columns={"centroid_lat": "lat", "centroid_lon": "lon"}
             ),
@@ -310,6 +313,7 @@ def block_forecast(
             PanchayatForecast(
                 panchayat_id=row["panchayat_id"],
                 panchayat_name=str(row["name"]),
+                unit_type=str(row["unit_type"]),
                 block_id=block_id,
                 block_name=block["block_name"],
                 latitude=float(row["lat"]),

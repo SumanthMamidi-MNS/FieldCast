@@ -75,6 +75,10 @@ class VariableForecast(BaseModel):
 class PanchayatForecast(BaseModel):
     panchayat_id: str
     panchayat_name: str
+    unit_type: str = Field(
+        default="village_cluster",
+        description="'gram_panchayat' (real LGD boundary) or 'village_cluster' (approximation)",
+    )
     block_id: str
     block_name: str
 
@@ -174,6 +178,7 @@ class PanchayatGeometry(BaseModel):
 
     panchayat_id: str
     panchayat_name: str
+    unit_type: str = "village_cluster"
     block_id: str
     geometry: dict
     centroid_lat: float
