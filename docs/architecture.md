@@ -1,4 +1,4 @@
-# Architecture — Panchayat-Level Weather Downscaling (SIH26074)
+# Architecture — FieldCast (SIH26074)
 
 > Living document: describes the system **as currently built**. The PRD holds only
 > the official problem statement; the requirements below are our derivation from it.
@@ -12,10 +12,10 @@ infer high-resolution information from low-resolution variables — for
 agro-meteorological advisory services.
 
 **The core design tension.** Standard downscaling (interpolation, image
-super-resolution) assumes the fine-scale field is a *smooth* function of the coarse
-one. That is false for rainfall, which is spatially discontinuous: across the
-Western Ghats, one slope gets a downpour while the leeward side a few km away stays
-dry. A second hard fact: panchayat-scale ground truth barely exists.
+super-resolution) assumes the fine field is a *smooth* function of the coarse one.
+That is false for rainfall, which is spatially discontinuous: across the Western
+Ghats one slope gets a downpour while the leeward side a few km away stays dry.
+And panchayat-scale ground truth barely exists.
 
 **Derived requirements / success criteria** (referenced from code as "success criteria"):
 
@@ -23,164 +23,173 @@ dry. A second hard fact: panchayat-scale ground truth barely exists.
    track real terrain, not a copy of the block value.
 2. **Beat the naive baseline** — where ground truth exists, be closer to it than
    "copy the block value". This comparison is the project's actual proof.
-3. **Explicit uncertainty** — every value carries an interval and a support label;
-   a confident wrong number drives a real, costly farming decision.
+3. **Explicit uncertainty** — every value carries an interval and a support label.
 4. **Usable by an extension officer** — plain-language advisories, not just numbers.
 5. **Honesty about evidence** — state where results are validated and where they
    are inference.
 
-**Three-tier honesty architecture.** Every output declares its tier; uncertainty
-widens down the tiers.
+**Three-tier honesty architecture.** Every output declares its tier.
 
 | Tier | Step | Ground truth | Status |
 |---|---|---|---|
-| **T1** | Block (~30–40 km) → fine grid (~16 km spacing, ERA5 blend) | Dense reanalysis | **Measured** on a held-out season |
-| **T2** | → real gauge point | 9 quality-screened GHCN gauges | **Measured** where gauges exist |
-| **T3** | → panchayat polygon (~35–50 km², ~24 per block) | None | **Inference**; point-scale interval factor (fitted at gauges), support capped at moderate |
+| **T1** | Block → ~16 km grid (ERA5 blend) | Dense reanalysis | **Measured** on held-out seasons |
+| **T2** | → real gauge point | GHCN: 4 modern gauges + ~100 per state in 1960-61 | **Measured** |
+| **T3** | → panchayat polygon (~35–50 km²) | None | **Inference**; gauge-calibrated interval, support capped at moderate |
 
 ---
 
-## 1. Tech stack
+## 1. Two halves: offline pipeline, online serving
 
-- **Backend:** Python 3.12, FastAPI + Uvicorn, Pydantic v2
-- **ML:** LightGBM (quantile + binary), scikit-learn (isotonic calibration), SciPy
-- **Geo/data:** GeoPandas, Shapely, pyproj, pandas, PyArrow (GeoParquet)
-- **HTTP:** httpx + tenacity, with a disk cache and an offline mode
+```
+          OFFLINE (local machine, full stack)                ONLINE (Vercel, numpy only)
+ GADM · datameet · LGD* · GHCN · Open-Meteo · DEM tiles
+        │
+ build_base ─► blocks, panchayat units, gauge index
+ fetch ──────► ERA5 weather history (resumable, quota-paced)
+ train ──────► per-variable LightGBM models + support model
+ evaluate ───► reports (T1, T2, T2 historical, transfer)            FastAPI app (backend.app.main)
+ export ─────► serve_bundle/  ──── committed to git ─────────►  reads bundle, numpy tree evaluator
+                                                                 + dashboard (CDN-promoted mount)
+```
+\* LGD is used when a CAPTCHA-protected export has been placed in `data/raw/lgd/`.
+
+The serving path shares every post-model computation with the pipeline
+(`models/numerics.py`, `models/finalize.py`, `reconcile.py`, `uncertainty.py`, all
+numpy-only) and a parity test requires the runtime to reproduce the pipeline
+predictor's output exactly.
+
+---
+
+## 2. Tech stack
+
+- **Runtime (deployed):** Python 3.12, FastAPI, pydantic v2, httpx, numpy (~83 MB installed)
+- **Pipeline (local, `pip install -e ".[pipeline]"`):** pandas, PyArrow, GeoPandas,
+  Shapely, pyproj, LightGBM, scikit-learn, SciPy, Pillow, typer, rich
 - **Frontend:** React 18 + Vite + TypeScript (strict) + MapLibre GL + Recharts
 - **Quality:** pytest + ruff (backend), vitest + eslint (frontend)
-
-Why LightGBM over neural super-resolution: see `decisions.md`.
+- **Deployment:** Vercel FastAPI preset (`[tool.vercel] entrypoint`), no Docker
 
 ---
 
-## 2. Data sources (all public, keyless)
+## 3. Data sources (all public, keyless)
 
 | Source | Used for | Notes |
 |---|---|---|
-| Open-Meteo archive (`best_match` ERA5 blend) | fine field + training target | `era5_land` returns null rainfall via this API; the blend varies at ~9 km |
-| Open-Meteo forecast | live block input | block value = mean over the block's grid points |
-| Open-Meteo elevation | 9-point terrain stencil | lazily per block for panchayats |
-| GADM 4.1 India L3 | **blocks** | 86 blocks across 7 MH districts |
-| datameet village polygons | **panchayat proxies** | 11,740 villages → 1,955 units (KMeans ~6 villages each, deterministic) |
-| GHCN-Daily (NOAA) | **T2 ground truth** | 185 stations in bbox, 9 pass the record-quality screen |
-
-**Free-tier budget constraint** (the reason for the training window below):
-Open-Meteo counts every location × fortnight as one call, against 600/min,
-5,000/hour and 10,000/day. The adapter paces requests to ~85% of the hourly limit;
-a minutely 429 waits and retries, while an hourly or daily cap raises
-`ApiBudgetExceeded`. Everything is cached, so a re-run resumes.
+| Open-Meteo archive (`best_match` ERA5 blend) | fine field, training target, replay | free tier 600/min, 5k/h, 10k/day; `pipeline.fetch` paces and resumes |
+| Open-Meteo forecast | live block input (yesterday … +15 days) | called by the deployed API, cached 30 min |
+| AWS Terrain Tiles (terrarium, z11) | all terrain | keyless, no quota; validated r=0.9985 vs previous DEM |
+| Natural Earth 10 m coastline | distance to coast | |
+| GADM 4.1 L3 | **blocks** | MH 86, KA 48 |
+| datameet village polygons | **panchayat units** | MH 11,740 villages → 1,955 units |
+| LGD village→gram-panchayat mapping | **real gram panchayats** | behind a CAPTCHA: manual download; clusters otherwise |
+| GHCN-Daily (NOAA) | **T2 ground truth** | modern: 9 MH / 8 KA screened; historical 1956-61: ~95-100 per state |
 
 ---
 
-## 3. Model
+## 4. Model
 
-- **Residual formulation:** predict the anomaly vs the block value. Additive for
-  temperature/humidity; log-ratio `log1p(local) − log1p(block)` for rain and wind.
-  A model that learns nothing degrades exactly to the naive baseline.
-- **Two-stage rainfall:** occurrence = IMD rainy day (>=2.5 mm); isotonic-calibrated classifier plus
-  conditional-amount quantile models trained on wet days only. The mixture's
-  quantiles are zero below the dry probability (an approximation, since only three
-  conditional levels are fitted).
-- **Quantiles** τ = 0.1 / 0.5 / 0.9, with crossing repaired by sorting.
-- **Features (17):** elevation, slope, monsoon exposure (cos(aspect − 245°) ×
-  sin(slope)), TRI, detrended roughness, local relief, distance to coast; block
-  value, elevation anomaly, block mean/spread of elevation, exposure anomaly, block
-  mean exposure, lapse-rate prior, day-of-year harmonics, monsoon flag.
-- **Epistemic support:** 0.6 × terrain similarity (chi-square-scaled Mahalanobis
-  distance to the training manifold) + 0.4 × gauge proximity (decays to 0 at 50 km)
-  − a tier penalty; T3 is capped at "moderate". Low support widens the interval
-  up to 2× around the median.
-- **Point-scale interval factor:** per variable, fitted on 2022 gauge-days so the
-  80% interval covers ~80% of gauge observations; applied to T2/T3 output and
-  evaluated on 2023 (humidity and wind have no gauges and keep the fixed ×1.35).
+- **Residual formulation:** predict the anomaly vs the block value (additive for
+  temperature/humidity; log-ratio for rain and wind). Learning nothing degrades
+  exactly to the naive baseline.
+- **Two-stage rainfall:** occurrence = IMD rainy day (≥2.5 mm), isotonic-calibrated
+  classifier; conditional-amount quantiles trained on wet days; mixture quantiles.
+- **Quantiles** τ = 0.1 / 0.5 / 0.9, crossing repaired by sorting.
+- **Features (20):** elevation, slope, monsoon exposure (cos(aspect − 245°) ×
+  sin(slope)), TRI, detrended roughness, local relief, distance to coast,
+  **upwind barrier, downwind rise, upwind max elevation** (terrain profile along the
+  monsoon flow line: the rain-shadow mechanism); block value, elevation anomaly,
+  block mean/spread of elevation, exposure anomaly, block mean exposure, lapse-rate
+  prior, day-of-year harmonics, monsoon flag.
+- **Epistemic support:** 0.6 × chi-square-scaled Mahalanobis similarity to the
+  training terrain + 0.4 × gauge proximity (0 at 50 km) − tier penalty; T3 capped
+  at "moderate". Low support widens the interval up to 2×.
+- **Point-scale interval factor:** per gauge-validated variable, fitted on the
+  1958-59 historical gauge seasons so the 80% interval covers ~80% of gauge
+  observations; applied to T2/T3. Humidity and wind (no gauges) keep ×1.35.
 - **Reconciliation:** area-weighted panchayat values re-aggregate to the block
-  value (for rain: the expectation sum of P(wet) x amount, not the median). One median-derived adjustment is applied to all quantiles, so the
-  interval is not collapsed.
+  value; rain is reconciled in expectation (Σ P(wet) × amount), not by median.
 
-**Training design.** Train on the dense field (perfect-prognosis coarsening: the
-block value is the mean of the grid points inside the block); validate on gauges
-never seen in training.
-**Holdouts:** whole blocks (SHA-256 hash, 20%) for validation; the whole 2023
-season for test; a date-level leakage assertion with a 3-day embargo runs before
-every fit.
-**Window:** monsoon seasons (Jun–Sep) 2022 (train) and 2023 (test), on a 0.15° grid
-(305 points, ~3.5 per block). Out-of-season requests are served with support
-halved and a tier-note disclosure.
+**Training and holdouts.** Seasons, not years: monsoons 2019-2022 and the
+2021-22 dry season train; the 2022-23 dry season and 2023 monsoon are test
+periods (5-day gap from the last training day ≥ 3-day embargo). Whole blocks (20%,
+SHA-256 hash) are held out for validation. A date-level leakage assertion runs
+before every fit; config tests guard that gauge seasons never overlap training.
 
 ---
 
-## 4. Baselines
+## 5. Baselines and metrics
 
-| | Baseline | Where |
-|---|---|---|
-| B0 | naive block copy — *the bar* | T1, T2 |
-| B1 | IDW of block values placed at block centroids | T1 |
-| B2 | lapse-rate correction (−6.5 °C/km) | T1, T2 (temperature) |
-
-A bilinear regrid (B3) is implemented but not reported: blocks are irregular
-polygons, not a regular coarse grid, so IDW is the appropriate interpolation
-baseline. Metrics: MAE/RMSE, skill vs each baseline with a 90% cluster-bootstrap
-CI, 80%-interval coverage, PIT-KS, Brier score (vs climatology and vs the naive
-block wet/dry call).
+B0 naive block copy (the bar), B1 IDW of block values, B2 lapse-rate correction
+(temperature). Metrics: MAE/RMSE; skill vs each baseline with a 90% cluster
+bootstrap CI (blocks at T1, gauges at T2); no "significant" verdict below 8
+gauges; 80%-interval coverage; PIT-KS; Brier score vs climatology and vs the naive
+block wet/dry call; the served (post-reconciliation) skill.
 
 ---
 
-## 5. Folder structure
+## 6. Serving
+
+- **Bundle** (`serve_bundle/<region>/`): `manifest.json` (per-variable feature
+  order, calibration, support model, trained months), `models.npz` (flattened
+  trees + isotonic thresholds), `blocks.json` (block stats + grid points; small
+  blocks borrow their 3 nearest points), `panchayats/<block>.json` (GeoJSON
+  simplified to ~30 m + precomputed terrain), `history/<block>.json` (replay).
+  `serve_bundle/reports/` holds the evaluation reports.
+- **Runtime** (`backend/serve/runtime.py`): numpy tree evaluation, isotonic via
+  `np.interp`, shared finalize step, advisory generation.
+- **Block input priority:** officer-supplied official bulletin (POST) → historical
+  replay → live Open-Meteo forecast.
+- **API:** `/api/health`, `/api/regions`, `/api/blocks`,
+  `/api/blocks/{id}/panchayats`, `/api/blocks/{id}/forecast` (GET/POST),
+  `/api/evaluation`, `/api/evaluation/reports`. A region is served only if its own
+  bundle exists (rain amounts do not transfer across regions).
+
+---
+
+## 7. Folder structure
 
 ```
 backend/
-  config.py                 regions, variables, constants, training window
-  app/                      main.py (FastAPI), schemas.py, services/{forecast,advisory}.py
+  config.py            regions, variables, seasons, constants, MODEL_VERSION
+  app/                 main.py (FastAPI + dashboard mount), schemas.py, services/advisory.py
+  serve/               trees.py (numpy trees), runtime.py (serving), export.py (bundle writer)
   pipeline/
-    sources/                cache.py, open_meteo.py, ghcn.py
-    geo/                    boundaries.py, panchayats.py, terrain.py
-    features/build.py       feature table, splits, leakage assertion
-    models/                 downscaler.py, predictor.py, reconcile.py, uncertainty.py
-    evaluate/               baselines.py, metrics.py, run.py
-    build_base.py, train.py CLIs
+    sources/           cache, open_meteo, ghcn, dem
+    geo/               boundaries, panchayats, gram_panchayats (LGD), terrain, coast
+    features/build.py  feature tables, splits, leakage assertion
+    models/            downscaler (LightGBM), predictor, numerics, finalize, reconcile, uncertainty
+    evaluate/          baselines, metrics, run
+    build_base.py, fetch.py, train.py
   tests/
-frontend/                   Vite + React dashboard (src/api, components, lib, types)
-data/{raw,cache,processed}  gitignored, regenerated by the pipeline
-models/artifacts/<region>/  per-variable boosters, calibrator, support.npz, summary.json
-reports/                    evaluation_<region>.{json,md}, run logs
+frontend/              FieldCast dashboard (Vite + React + MapLibre)
+serve_bundle/          committed serving bundle (what production reads)
+reports/               evaluation reports (md + json)
+data/, models/         local pipeline data and artefacts (gitignored)
+vercel.json, .vercelignore, .python-version
 ```
 
 ---
 
-## 6. Data flow
+## 8. Deployment
 
-**Offline:** `build_base` (blocks → panchayats → screened stations) →
-`train` (grid → terrain → ERA5 seasons → per-variable tables → split → fit →
-artifacts) → `evaluate.run` (T1 + T2 report).
-
-**Online:** `GET /api/blocks/{id}/forecast?date=` resolves the block value
-(historical replay, or the operational forecast for yesterday to +15 days);
-`POST` takes an officer-supplied official block forecast instead. Panchayat
-terrain (cached per block) → `Predictor` (the same code path as the gauge
-evaluation) → reconcile → support → advisory → JSON. Other endpoints:
-`/api/health`, `/api/blocks`, `/api/blocks/{id}/panchayats`, `/api/evaluation`.
+`vercel.json` builds the dashboard (`cd frontend && npm ci && npm run build`); the
+FastAPI preset installs the runtime dependencies from `pyproject.toml` and loads
+`backend.app.main:app`, whose StaticFiles mount of `frontend/dist` is promoted to
+the CDN. `.vercelignore` keeps pipeline data out of uploads. Locally, one
+`uvicorn` process serves both the API and the built dashboard, and works offline
+for replay dates and officer-supplied bulletins.
 
 ---
 
-## 7. Deployment
+## 9. Known limitations
 
-Local: `uvicorn backend.app.main:app --port 8000` and `npm run dev` (Vite proxies
-`/api`). After one warm run, `DOWNSCALE_OFFLINE=1` serves entirely from cache.
-
----
-
-## 8. Known limitations
-
-1. T3 panchayat values are not validated at panchayat scale; no such truth exists.
-2. Village clusters approximate panchayats; they are not official boundaries.
-3. The target is a reanalysis (ERA5 blend), not an IMD operational product.
-4. Only 9 recent GHCN gauges, so T2 results carry wide CIs.
-5. Trained on the 2022 monsoon only (API budget).
-7. **The "no worse than naive" guarantee holds only in the training region.** On
-   Karnataka, MH-trained rainfall-amount output was 18-25% worse than naive while
-   occurrence and temperature transferred; the API serves only regions with
-   their own models.
-8. At point gauges, temperature skill is matched or beaten by a plain lapse-rate
-   correction (4 gauges; not significance-testable).
-6. The distance-to-coast covariate uses a west-coast longitude table (valid for
-   the peninsular west coast only).
+1. T3 panchayat values are inference: no panchayat-scale truth exists.
+2. Real gram-panchayat boundaries need the CAPTCHA-protected LGD export; without
+   it, units are deterministic clusters of ~6 villages (labelled as such).
+3. The target is a reanalysis (ERA5 blend), not an IMD operational product; IMD
+   block values can be supplied through the API but were not used in training.
+4. Modern gauges are scarce (4 in modelled MH blocks); the ~100-gauge test uses
+   1960-61, when the reanalysis assimilated fewer observations.
+5. Models do not transfer across regions for rainfall amounts; each region needs
+   its own training (MH and KA are trained separately).
+6. Humidity and wind have no gauge validation and keep a fixed T3 inflation.
