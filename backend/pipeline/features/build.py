@@ -54,6 +54,9 @@ TERRAIN_COLUMNS = [
     "roughness_m",
     "local_relief_m",
     "distance_to_coast_km",
+    "upwind_barrier_m",
+    "downwind_rise_m",
+    "upwind_max_elev_m",
 ]
 
 # Features derived per (location, day) relative to its block.

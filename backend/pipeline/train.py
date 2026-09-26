@@ -39,10 +39,10 @@ from backend.pipeline.features.build import (
     era5_grid_points,
     spatial_temporal_split,
 )
-from backend.pipeline.geo.terrain import compute_terrain, distance_to_coast_km
+from backend.pipeline.geo.terrain import terrain_features
 from backend.pipeline.models.downscaler import MODEL_VERSION, VariableDownscaler
 from backend.pipeline.models.uncertainty import SupportModel
-from backend.pipeline.sources.open_meteo import fetch_daily_weather, fetch_elevation
+from backend.pipeline.sources.open_meteo import fetch_daily_weather
 
 app = typer.Typer(add_completion=False)
 console = Console()
@@ -72,16 +72,9 @@ def build_grid_for_region(blocks: gpd.GeoDataFrame, step_deg: float = 0.1) -> pd
 
 
 def attach_terrain(points: pd.DataFrame) -> pd.DataFrame:
-    """Terrain covariates for every grid point, via the batched elevation API."""
-    console.print(f"  sampling terrain for {len(points)} points ({len(points) * 9} lookups)...")
-
-    def sampler(lats, lons):
-        return fetch_elevation(list(lats), list(lons))["elevation_m"].to_numpy()
-
-    terrain = compute_terrain(points["lat"].tolist(), points["lon"].tolist(), sampler)
-    terrain["distance_to_coast_km"] = distance_to_coast_km(
-        points["lat"].to_numpy(), points["lon"].to_numpy()
-    )
+    """Terrain covariates for every grid point, from the keyless DEM tiles."""
+    console.print(f"  terrain for {len(points)} points (DEM tiles)...")
+    terrain = terrain_features(points["lat"].tolist(), points["lon"].tolist())
     return pd.concat([points.reset_index(drop=True), terrain.reset_index(drop=True)], axis=1)
 
 

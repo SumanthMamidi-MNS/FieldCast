@@ -48,7 +48,7 @@ from backend.pipeline.evaluate.metrics import (
     skill_score,
 )
 from backend.pipeline.features.build import spatial_temporal_split
-from backend.pipeline.geo.terrain import compute_terrain, distance_to_coast_km
+from backend.pipeline.geo.terrain import terrain_features
 from backend.pipeline.models.downscaler import mixture_quantiles
 from backend.pipeline.models.predictor import Predictor, build_target_features
 from backend.pipeline.models.reconcile import reconcile, reconcile_two_stage
@@ -275,15 +275,7 @@ def evaluate_t1(region_key: str, predictor: Predictor, transfer: bool) -> dict:
 # T2: real gauges
 # --------------------------------------------------------------------------
 def _station_terrain(stations: pd.DataFrame) -> pd.DataFrame:
-    from backend.pipeline.sources.open_meteo import fetch_elevation
-
-    def sampler(lats, lons):
-        return fetch_elevation(list(lats), list(lons))["elevation_m"].to_numpy()
-
-    terr = compute_terrain(stations["latitude"].tolist(), stations["longitude"].tolist(), sampler)
-    terr["distance_to_coast_km"] = distance_to_coast_km(
-        stations["latitude"].to_numpy(), stations["longitude"].to_numpy()
-    )
+    terr = terrain_features(stations["latitude"].tolist(), stations["longitude"].tolist())
     # Use DEM elevation, not the station inventory's surveyed value, so gauge
     # features are built exactly like the training grid's.
     base = stations.drop(columns=["elevation_m"], errors="ignore").reset_index(drop=True)

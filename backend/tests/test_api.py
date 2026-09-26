@@ -39,6 +39,9 @@ def _synthetic_table(key: str, n: int = 2500, seed: int = 0) -> pd.DataFrame:
             "roughness_m": np.abs(rng.normal(5, 2, n)),
             "local_relief_m": np.abs(rng.normal(80, 20, n)),
             "distance_to_coast_km": rng.uniform(20, 200, n),
+            "upwind_barrier_m": np.abs(rng.normal(150, 120, n)),
+            "downwind_rise_m": np.abs(rng.normal(80, 80, n)),
+            "upwind_max_elev_m": rng.normal(900, 200, n),
             "block_mean_elevation_m": 600.0,
             "block_elevation_spread_m": 200.0,
             "block_mean_exposure": 0.0,
@@ -84,6 +87,9 @@ def predictor() -> Predictor:
             "roughness_m": np.abs(rng.normal(5, 2, 30)),
             "local_relief_m": np.abs(rng.normal(80, 20, 30)),
             "distance_to_coast_km": rng.uniform(20, 200, 30),
+            "upwind_barrier_m": np.abs(rng.normal(150, 120, 30)),
+            "downwind_rise_m": np.abs(rng.normal(80, 80, 30)),
+            "upwind_max_elev_m": rng.normal(900, 200, 30),
         }
     )
     support = SupportModel.fit(
@@ -132,6 +138,9 @@ def wired(monkeypatch, predictor):
             "roughness_m": 5.0,
             "local_relief_m": 80.0,
             "distance_to_coast_km": np.linspace(40, 120, n),
+            "upwind_barrier_m": np.linspace(0, 400, n),
+            "downwind_rise_m": np.linspace(300, 0, n),
+            "upwind_max_elev_m": 1000.0,
         },
         index=pd.Index(pch["panchayat_id"], name="panchayat_id"),
     )
@@ -277,3 +286,16 @@ def test_offline_cache_miss_is_a_clear_503_not_a_crash(wired, monkeypatch):
     r = TestClient(main.app).get(f"/api/blocks/{BLOCK}/panchayats")
     assert r.status_code == 503
     assert "offline" in r.json()["detail"]
+
+
+def test_regions_endpoint_lists_both_states():
+    body = TestClient(main.app).get("/api/regions").json()
+    keys = {r["key"] for r in body}
+    assert {"mh_ghats", "ka_ghats"} <= keys
+    assert all("served" in r for r in body)
+
+
+def test_evaluation_reports_endpoint_returns_json_objects():
+    r = TestClient(main.app).get("/api/evaluation/reports")
+    assert r.status_code == 200
+    assert isinstance(r.json(), dict)

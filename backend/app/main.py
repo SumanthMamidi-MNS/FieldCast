@@ -84,6 +84,39 @@ def health() -> HealthResponse:
     )
 
 
+class RegionInfo(BaseModel):
+    key: str
+    state: str
+    districts: list[str]
+    served: bool = Field(description="True when this region has its own trained models")
+
+
+@app.get("/api/regions", response_model=list[RegionInfo])
+def regions() -> list[RegionInfo]:
+    return [
+        RegionInfo(
+            key=r.key,
+            state=r.state_name,
+            districts=list(r.districts),
+            served=(ARTIFACT_DIR / r.key / "summary.json").exists(),
+        )
+        for r in REGIONS.values()
+    ]
+
+
+@app.get("/api/evaluation/reports")
+def evaluation_reports() -> dict:
+    """Every committed evaluation report, keyed by file stem, for the Evidence page.
+
+    Includes transfer runs (models from one region scored on another), which the
+    per-region table endpoint does not cover.
+    """
+    out = {}
+    for path in sorted(REPORT_DIR.glob("evaluation_*.json")):
+        out[path.stem] = json.loads(path.read_text(encoding="utf-8"))
+    return out
+
+
 @app.get("/api/blocks", response_model=list[BlockSummary])
 def blocks(region: str = Query(PRIMARY_REGION)) -> list[BlockSummary]:
     return _call(svc.list_blocks, _region(region))

@@ -41,6 +41,9 @@ def _sample_points(n_blocks: int = 6, per_block: int = 5) -> pd.DataFrame:
                     "roughness_m": abs(rng.normal(5, 2)),
                     "local_relief_m": abs(rng.normal(60, 20)),
                     "distance_to_coast_km": 50.0 + b * 20,
+                    "upwind_barrier_m": abs(rng.normal(150, 100)),
+                    "downwind_rise_m": abs(rng.normal(80, 60)),
+                    "upwind_max_elev_m": 900.0 + rng.normal(0, 150),
                 }
             )
     return pd.DataFrame(rows)
@@ -275,6 +278,9 @@ def test_feature_table_has_every_declared_feature_column():
             "roughness_m",
             "local_relief_m",
             "distance_to_coast_km",
+            "upwind_barrier_m",
+            "downwind_rise_m",
+            "upwind_max_elev_m",
         ]
     ]
     mapping = points[["lat", "lon", "block_id"]]

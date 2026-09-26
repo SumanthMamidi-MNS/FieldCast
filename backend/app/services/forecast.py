@@ -37,7 +37,7 @@ from backend.app.schemas import (
 )
 from backend.app.services.advisory import build_advisory
 from backend.config import PROCESSED_DIR, TIERS, TRAINING_WINDOW, VARIABLES
-from backend.pipeline.geo.terrain import compute_terrain, distance_to_coast_km
+from backend.pipeline.geo.terrain import terrain_features
 from backend.pipeline.models.downscaler import MODEL_VERSION
 from backend.pipeline.models.predictor import Predictor, build_target_features
 from backend.pipeline.models.reconcile import differentiation_spread
@@ -157,30 +157,22 @@ def panchayat_geometries(region_key: str, block_id: str) -> list[PanchayatGeomet
 def panchayat_terrain(region_key: str, block_id: str) -> pd.DataFrame:
     """Terrain at panchayat centroids for one block, cached to disk.
 
-    Computed lazily per block: the whole region would cost ~18k elevation lookups,
-    most of them for blocks nobody opens. Each block's result is persisted, so the
-    cost is paid once.
+    Precomputed for every block by `python -m backend.app.warm`; computed and
+    cached on first request otherwise. Uses the keyless DEM tiles, so there is
+    no API quota involved.
     """
-    cache_dir = PROCESSED_DIR / f"panchayat_terrain_{region_key}"
+    cache_dir = PROCESSED_DIR / f"panchayat_terrain_v2_{region_key}"
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / f"{block_id}.parquet"
     if path.exists():
         return pd.read_parquet(path)
-
-    from backend.pipeline.sources.open_meteo import fetch_elevation
 
     pch = get_panchayats(region_key)
     sub = pch[pch["block_id"] == block_id].reset_index(drop=True)
     if sub.empty:
         raise ForecastError(f"block {block_id!r} has no panchayat units", status=404)
 
-    def sampler(lats, lons):
-        return fetch_elevation(list(lats), list(lons))["elevation_m"].to_numpy()
-
-    terr = compute_terrain(sub["centroid_lat"].tolist(), sub["centroid_lon"].tolist(), sampler)
-    terr["distance_to_coast_km"] = distance_to_coast_km(
-        sub["centroid_lat"].to_numpy(), sub["centroid_lon"].to_numpy()
-    )
+    terr = terrain_features(sub["centroid_lat"].tolist(), sub["centroid_lon"].tolist())
     terr.index = sub["panchayat_id"]
     terr.to_parquet(path)
     return terr

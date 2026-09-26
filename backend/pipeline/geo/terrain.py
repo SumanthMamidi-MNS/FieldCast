@@ -209,35 +209,110 @@ def compute_terrain(
     return pd.DataFrame([r.__dict__ for r in rows], index=pd.RangeIndex(len(lats)))
 
 
-def distance_to_coast_km(
+# --------------------------------------------------------------------------
+# Orographic (rain-shadow) features
+# --------------------------------------------------------------------------
+_EARTH_RADIUS_KM = 6371.0088
+
+
+def _destination(
+    lat: np.ndarray, lon: np.ndarray, bearing_deg: float, dist_km: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """Great-circle destination point for each (lat, lon)."""
+    phi1 = np.radians(lat)
+    lam1 = np.radians(lon)
+    theta = math.radians(bearing_deg)
+    delta = dist_km / _EARTH_RADIUS_KM
+    phi2 = np.arcsin(np.sin(phi1) * math.cos(delta) + np.cos(phi1) * math.sin(delta) * math.cos(theta))
+    lam2 = lam1 + np.arctan2(
+        math.sin(theta) * math.sin(delta) * np.cos(phi1),
+        math.cos(delta) - np.sin(phi1) * np.sin(phi2),
+    )
+    return np.degrees(phi2), np.degrees(lam2)
+
+
+def compute_orographic(
     lats: Sequence[float],
     lons: Sequence[float],
-    coastline_lons_by_lat: dict[int, float] | None = None,
-) -> np.ndarray:
-    """Approximate distance inland from the Arabian Sea coast.
+    sampler: ElevationSampler,
+    flow_deg: float = MONSOON_FLOW_DEG,
+    upwind_km: float = 40.0,
+    downwind_km: float = 16.0,
+    step_km: float = 2.0,
+) -> pd.DataFrame:
+    """Elevation profiles along the monsoon flow line through each point.
 
-    A deliberate simplification: for the peninsular west coast the coastline is
-    close to meridional, so distance east of the coastal longitude at that
-    latitude is a good proxy. This is a covariate, not a published measurement —
-    precision here buys nothing, and pulling a full coastline geometry for it
-    would add a dependency for no measurable gain.
+    The Western Ghats rain shadow is not a property of the local slope: a village
+    on flat ground 30 km east of the crest is dry because of the ridge upwind of
+    it. So we sample the terrain along the SW-monsoon direction:
+
+    - `upwind_barrier_m`: how far the highest ground upwind (towards 245°, where
+      the monsoon comes from) rises above this point. Large => rain shadow.
+    - `downwind_rise_m`: how far terrain rises ahead of the point in the flow
+      direction. Large => air is being forced up here (windward slope, heavy rain).
+    - `upwind_max_elev_m`: the height of that upwind barrier itself.
     """
-    # West-coast longitude by whole degree of latitude (Arabian Sea).
-    default_coast = {
-        8: 77.0, 9: 76.5, 10: 76.0, 11: 75.6, 12: 74.9, 13: 74.7, 14: 74.3,
-        15: 73.9, 16: 73.5, 17: 73.3, 18: 72.9, 19: 72.8, 20: 72.8, 21: 72.7,
-        22: 72.6, 23: 72.3,
-    }
-    table = coastline_lons_by_lat or default_coast
+    lat = np.asarray(lats, dtype=float)
+    lon = np.asarray(lons, dtype=float)
+    if lat.shape != lon.shape:
+        raise ValueError(f"lats/lons length mismatch: {lat.size} vs {lon.size}")
+    cols = ["upwind_barrier_m", "downwind_rise_m", "upwind_max_elev_m"]
+    if lat.size == 0:
+        return pd.DataFrame(columns=cols)
 
-    out = np.empty(len(lats), dtype=float)
-    for i, (lat, lon) in enumerate(zip(lats, lons, strict=True)):
-        key = round(float(lat))
-        coast_lon = table.get(key)
-        if coast_lon is None:
-            nearest = min(table, key=lambda k: abs(k - key))
-            coast_lon = table[nearest]
-        dlon = float(lon) - coast_lon
-        km_per_deg = 111.32 * math.cos(math.radians(float(lat)))
-        out[i] = max(dlon * km_per_deg, 0.0)
+    up_d = np.arange(step_km, upwind_km + 1e-9, step_km)
+    down_d = np.arange(step_km, downwind_km + 1e-9, step_km)
+
+    q_lat = [lat]
+    q_lon = [lon]
+    for d in up_d:
+        a, b = _destination(lat, lon, flow_deg, float(d))
+        q_lat.append(a)
+        q_lon.append(b)
+    for d in down_d:
+        a, b = _destination(lat, lon, (flow_deg + 180.0) % 360.0, float(d))
+        q_lat.append(a)
+        q_lon.append(b)
+
+    flat_lat = np.concatenate(q_lat)
+    flat_lon = np.concatenate(q_lon)
+    elev = np.asarray(sampler(flat_lat.tolist(), flat_lon.tolist()), dtype=float)
+    elev = elev.reshape(1 + up_d.size + down_d.size, lat.size)
+
+    own = elev[0]
+    upwind = elev[1 : 1 + up_d.size]
+    downwind = elev[1 + up_d.size :]
+    # Sea pixels can decode slightly negative; the sea is never a barrier.
+    upwind_max = np.nanmax(np.maximum(upwind, 0.0), axis=0)
+    downwind_max = np.nanmax(np.maximum(downwind, 0.0), axis=0)
+
+    return pd.DataFrame(
+        {
+            "upwind_barrier_m": np.maximum(upwind_max - own, 0.0),
+            "downwind_rise_m": np.maximum(downwind_max - own, 0.0),
+            "upwind_max_elev_m": upwind_max,
+        }
+    )
+
+
+def terrain_features(
+    lats: Sequence[float],
+    lons: Sequence[float],
+    sampler: ElevationSampler | None = None,
+) -> pd.DataFrame:
+    """Every terrain covariate the models use, for a set of points.
+
+    One entry point for the training grid, gauges and panchayats, so all three
+    are described identically. Defaults to the keyless DEM tiles.
+    """
+    if sampler is None:
+        from backend.pipeline.sources.dem import sample_elevation
+
+        sampler = sample_elevation
+    from backend.pipeline.geo.coast import distance_to_coast_km as coast_km
+
+    stencil = compute_terrain(lats, lons, sampler)
+    oro = compute_orographic(lats, lons, sampler)
+    out = pd.concat([stencil.reset_index(drop=True), oro.reset_index(drop=True)], axis=1)
+    out["distance_to_coast_km"] = coast_km(np.asarray(lats, float), np.asarray(lons, float))
     return out

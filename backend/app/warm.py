@@ -1,8 +1,8 @@
 """Pre-compute panchayat terrain for blocks so their first map load is instant.
 
 Run:  python -m backend.app.warm --region mh_ghats --limit 10
-Blocks are warmed in order of panchayat count; each costs ~9 elevation lookups
-per panchayat against the Open-Meteo budget, so warm what the demo needs.
+Terrain comes from keyless DEM tiles, so warming every block is free:
+    python -m backend.app.warm --region mh_ghats --limit 1000
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ def run(
     targets = [b for b in blocks if b.block_id in block] if block else blocks[:limit]
     done = 0
     for b in targets:
-        path = PROCESSED_DIR / f"panchayat_terrain_{region}" / f"{b.block_id}.parquet"
+        path = PROCESSED_DIR / f"panchayat_terrain_v2_{region}" / f"{b.block_id}.parquet"
         if path.exists():
             continue
         console.print(f"warming {b.district} / {b.block_name} ({b.panchayat_count} panchayats)")

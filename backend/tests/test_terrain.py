@@ -17,8 +17,8 @@ import pytest
 from backend.config import MONSOON_FLOW_DEG
 from backend.pipeline.geo.terrain import (
     _M_PER_DEG_LAT,
+    compute_orographic,
     compute_terrain,
-    distance_to_coast_km,
 )
 
 
@@ -197,12 +197,76 @@ def test_empty_input_returns_empty_frame_with_schema():
     assert "monsoon_exposure" in df.columns
 
 
+def _metric_coastline_at_lon(lon: float):
+    """A north-south coastline along a meridian, in the metric CRS."""
+    import geopandas as gpd
+    from shapely.geometry import LineString
+
+    from backend.config import GEOGRAPHIC_CRS, METRIC_CRS
+
+    line = LineString([(lon, 10.0), (lon, 25.0)])
+    return gpd.GeoSeries([line], crs=GEOGRAPHIC_CRS).to_crs(METRIC_CRS).iloc[0]
+
+
 def test_distance_to_coast_increases_inland():
-    d = distance_to_coast_km([19.0, 19.0, 19.0], [73.0, 74.5, 76.0])
+    from backend.pipeline.geo.coast import distance_to_coast_km
+
+    coast = _metric_coastline_at_lon(72.8)
+    d = distance_to_coast_km([19.0, 19.0, 19.0], [73.0, 74.5, 76.0], coastline=coast)
     assert d[0] < d[1] < d[2]
-    assert d[0] >= 0.0
 
 
-def test_distance_to_coast_is_clamped_at_zero_offshore():
-    d = distance_to_coast_km([19.0], [70.0])
-    assert d[0] == 0.0
+def test_distance_to_coast_is_about_right_in_km():
+    """0.5 deg of longitude at 19N is about 52.6 km."""
+    from backend.pipeline.geo.coast import distance_to_coast_km
+
+    coast = _metric_coastline_at_lon(73.0)
+    d = distance_to_coast_km([19.0], [73.5], coastline=coast)
+    assert 45.0 < d[0] < 60.0
+
+
+# --------------------------------------------------------------------------
+# Orographic features
+# --------------------------------------------------------------------------
+
+
+def _ridge_sampler(ridge_lon: float, height: float = 1200.0, base: float = 400.0):
+    """A north-south ridge: high within 0.05 deg of ridge_lon, flat elsewhere."""
+
+    def sampler(lats, lons):
+        lons = np.asarray(lons, dtype=float)
+        return np.where(np.abs(lons - ridge_lon) < 0.05, height, base)
+
+    return sampler
+
+
+def test_point_east_of_a_ridge_sits_in_its_rain_shadow():
+    """The SW monsoon comes from 245 degrees, so a ridge to the west-south-west
+    is upwind of the point: a large upwind barrier and nothing rising ahead."""
+    oro = compute_orographic([18.5], [74.0], _ridge_sampler(ridge_lon=73.8)).iloc[0]
+    assert oro.upwind_barrier_m == pytest.approx(800.0)
+    assert oro.downwind_rise_m == pytest.approx(0.0)
+    assert oro.upwind_max_elev_m == pytest.approx(1200.0)
+
+
+def test_point_west_of_a_ridge_faces_a_rise_not_a_barrier():
+    """Windward foot: terrain rises ahead of the flow, the upwind side is low."""
+    oro = compute_orographic([18.5], [73.6], _ridge_sampler(ridge_lon=73.7)).iloc[0]
+    assert oro.downwind_rise_m == pytest.approx(800.0)
+    assert oro.upwind_barrier_m == pytest.approx(0.0)
+
+
+def test_orographic_samples_every_point_in_one_batched_call():
+    calls = {"n": 0}
+
+    def counting(lats, lons):
+        calls["n"] += 1
+        return np.full(len(lats), 300.0)
+
+    compute_orographic([18.0, 18.5, 19.0], [73.5, 74.0, 74.5], counting)
+    assert calls["n"] == 1
+
+
+def test_orographic_empty_input_has_schema():
+    df = compute_orographic([], [], _flat_sampler())
+    assert list(df.columns) == ["upwind_barrier_m", "downwind_rise_m", "upwind_max_elev_m"]
