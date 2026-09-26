@@ -36,7 +36,7 @@ widens down the tiers.
 |---|---|---|---|
 | **T1** | Block (~30–40 km) → fine grid (~16 km spacing, ERA5 blend) | Dense reanalysis | **Measured** on a held-out season |
 | **T2** | → real gauge point | 9 quality-screened GHCN gauges | **Measured** where gauges exist |
-| **T3** | → panchayat polygon (~35–50 km², ~24 per block) | None | **Inference**; interval inflated ×1.35 |
+| **T3** | → panchayat polygon (~35–50 km², ~24 per block) | None | **Inference**; point-scale interval factor (fitted at gauges), support capped at moderate |
 
 ---
 
@@ -77,7 +77,7 @@ a minutely 429 waits and retries, while an hourly or daily cap raises
 - **Residual formulation:** predict the anomaly vs the block value. Additive for
   temperature/humidity; log-ratio `log1p(local) − log1p(block)` for rain and wind.
   A model that learns nothing degrades exactly to the naive baseline.
-- **Two-stage rainfall:** isotonic-calibrated occurrence classifier plus
+- **Two-stage rainfall:** occurrence = IMD rainy day (>=2.5 mm); isotonic-calibrated classifier plus
   conditional-amount quantile models trained on wet days only. The mixture's
   quantiles are zero below the dry probability (an approximation, since only three
   conditional levels are fitted).
@@ -86,11 +86,15 @@ a minutely 429 waits and retries, while an hourly or daily cap raises
   sin(slope)), TRI, detrended roughness, local relief, distance to coast; block
   value, elevation anomaly, block mean/spread of elevation, exposure anomaly, block
   mean exposure, lapse-rate prior, day-of-year harmonics, monsoon flag.
-- **Epistemic support:** 0.6 × Mahalanobis similarity to the training terrain
-  manifold + 0.4 × gauge proximity (decays to 0 at 50 km) − a tier penalty. Low
-  support widens the interval up to 2× around the median.
+- **Epistemic support:** 0.6 × terrain similarity (chi-square-scaled Mahalanobis
+  distance to the training manifold) + 0.4 × gauge proximity (decays to 0 at 50 km)
+  − a tier penalty; T3 is capped at "moderate". Low support widens the interval
+  up to 2× around the median.
+- **Point-scale interval factor:** per variable, fitted on 2022 gauge-days so the
+  80% interval covers ~80% of gauge observations; applied to T2/T3 output and
+  evaluated on 2023 (humidity and wind have no gauges and keep the fixed ×1.35).
 - **Reconciliation:** area-weighted panchayat values re-aggregate to the block
-  value. One median-derived adjustment is applied to all quantiles, so the
+  value (for rain: the expectation sum of P(wet) x amount, not the median). One median-derived adjustment is applied to all quantiles, so the
   interval is not collapsed.
 
 **Training design.** Train on the dense field (perfect-prognosis coarsening: the
@@ -171,6 +175,12 @@ Local: `uvicorn backend.app.main:app --port 8000` and `npm run dev` (Vite proxie
 2. Village clusters approximate panchayats; they are not official boundaries.
 3. The target is a reanalysis (ERA5 blend), not an IMD operational product.
 4. Only 9 recent GHCN gauges, so T2 results carry wide CIs.
-5. Trained on the 2022 monsoon only (API budget); Karnataka transfer pending.
+5. Trained on the 2022 monsoon only (API budget).
+7. **The "no worse than naive" guarantee holds only in the training region.** On
+   Karnataka, MH-trained rainfall-amount output was 18-25% worse than naive while
+   occurrence and temperature transferred; the API serves only regions with
+   their own models.
+8. At point gauges, temperature skill is matched or beaten by a plain lapse-rate
+   correction (4 gauges; not significance-testable).
 6. The distance-to-coast covariate uses a west-coast longitude table (valid for
    the peninsular west coast only).

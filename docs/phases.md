@@ -11,64 +11,55 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` done & verified
 - [x] Problem analysed; every data source verified reachable before designing
 - [x] Repo, feature branch `feat/downscaling-system`, .gitignore
 - [x] architecture.md (derived requirements + design), decisions.md
-- [x] Python venv + deps; pytest + ruff green
 
 ## Phase 1 — Data layer `[x]`
 - [x] Adapters: Open-Meteo (archive/forecast/elevation), GADM, datameet, GHCN
-- [x] Disk cache, retry/backoff, offline mode, rate-limit pacing + budget error
-- [x] 86 blocks (7 MH districts); 11,740 real villages → 1,955 panchayat proxies
-- [x] GHCN index: 185 stations in bbox, 9 pass the record-quality screen
+- [x] Disk cache, retry, offline mode, hourly/minutely pacing, budget error
+- [x] MH: 86 blocks, 11,740 villages → 1,955 panchayat proxies, 9 screened gauges
+- [x] KA: 48 blocks, 8 screened gauges
 
 ## Phase 2 — Terrain & features `[x]`
-- [x] 9-point terrain stencil: elevation, slope, aspect, monsoon exposure, TRI,
-      detrended roughness, relief; distance to coast
-- [x] Block context + temporal features; whole-block + whole-season holdouts
-- [x] Date-level leakage assertion with 3-day embargo (tested)
+- [x] 9-point terrain stencil incl. monsoon exposure and detrended roughness
+- [x] Whole-block + whole-season holdouts; date-level leakage assertion with embargo
 
-## Phase 3 — Models `[~]`
-- [x] Anomaly formulation; two-stage calibrated rainfall; quantile models
-- [x] Reconciliation, epistemic support, interval inflation (tested)
-- [x] End-to-end smoke run on live data (1 season, 108 points) — all 5 variables trained
-- [~] Full MH training run (2022 train / 2023 test, 305 points) — running,
-      paced to the Open-Meteo hourly budget
+## Phase 3 — Models `[x]`
+- [x] Anomaly formulation; two-stage rain (IMD 2.5 mm rainy day); quantile models
+- [x] Expected-value rain reconciliation; chi-square support; T3 cap at moderate
+- [x] Full MH training (2022 train / 2023 test, 305 grid points)
 
-## Phase 4 — Evaluation `[~]`
-- [x] Baselines B0 naive, B1 IDW, B2 lapse-rate; metrics incl. coverage, PIT, Brier
-- [x] Evaluation runner: T1 held-out season + T2 real gauges, cluster-bootstrap CIs
-- [ ] Run it on the full MH models; commit the report with wins and losses
-- [ ] Karnataka transfer test (needs KA base build + one API-budget day)
+## Phase 4 — Evaluation `[x]`
+- [x] T1 (held-out season) and T2 (real gauges) vs naive, IDW, lapse-rate
+- [x] Point-scale interval calibration fitted on 2022 gauges, checked on 2023
+- [x] Karnataka transfer test
+- [x] Reports committed: `reports/evaluation_mh_ghats.md`,
+      `reports/evaluation_ka_transfer_from_mh_ghats.md`
 
-**Success:** a published table of skill vs naive at real gauges, losses reported
-exactly like wins.
+**Outcome:** beats naive at T1 for temperature, humidity, wind and rain
+occurrence (significant); rain amount not significant; at gauges temperature ≈
+lapse-rate; rain amount does not transfer to KA. All reported in README.
 
 ## Phase 5 — API `[x]`
-- [x] FastAPI: health, blocks, panchayat geometry, forecast (GET replay/operational,
-      POST official block input), evaluation
-- [x] Every value: median + interval + tier + support label + advisory
-- [x] 13 API tests on a synthetic region (differentiation, reconciliation, season)
-- [ ] Live check against the trained MH models
+- [x] Health, blocks, panchayat geometry, forecast (GET replay/live, POST official input), evaluation
+- [x] Live check: 25-panchayat block in 0.4 s; offline demo path verified; clear 503s
 
-## Phase 6 — Dashboard `[~]`
-- [x] Map, confidence texture, detail panel, interval band, comparison view, mock API
-      (44 vitest tests, lint clean)
-- [~] main entry, TS fix, wiring to the real API, date picker, official-input form
-      — frontend agent working
+## Phase 6 — Dashboard `[x]`
+- [x] Map fitted to block, collision-free labels, confidence texture, detail panel,
+      date picker, official-bulletin form, comparison view
+- [x] Checked in browser at 1280 and 375 px (59 vitest tests, lint + build clean)
 
-## Phase 7 — Hardening & delivery `[ ]`
-- [ ] README: validated vs inferred, limitations, how to run
-- [ ] Offline demo path verified (`DOWNSCALE_OFFLINE=1`)
-- [ ] Full lint + test, both stacks; memory.md entry
+## Phase 7 — Hardening & delivery `[x]`
+- [x] README with results, what is validated vs inferred, limitations
+- [x] Offline demo path verified (`DOWNSCALE_OFFLINE=1`)
+- [x] Full lint + test, both stacks; decisions.md and memory.md current
 
 ---
 
-## Next up
-1. Finish the full MH training run, then run the evaluation and commit the report.
-2. Frontend wired to the live API; run the app and verify in a browser.
-3. Build the Karnataka base, train its grid, run the transfer evaluation.
-4. README and final verification.
-
-## Notes
-- Open-Meteo free tier (5k/hour, 10k/day) is the pacing constraint on anything
-  that fetches weather; runs resume from cache after a budget stop.
-- Phase 4 cannot be compromised: if the model does not beat naive at gauges, we
-  report it and diagnose, not tune until the number looks good.
+## Remaining / optional next work
+1. Warm terrain for the demo blocks before a presentation
+   (`python -m backend.app.warm --limit 10`, ~1 API-budget hour).
+2. Add the 2021 monsoon to training when budget allows (the cache makes it additive).
+3. Train a Karnataka model if KA is to be served; the transfer test shows rain
+   amounts need per-region training.
+4. Decide whether temperature output should fall back to the lapse-rate
+   correction below grid scale (it matched the model at gauges).
+5. Docker packaging was planned but not built (see memory.md).
