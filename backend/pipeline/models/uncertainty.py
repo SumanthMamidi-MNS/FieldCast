@@ -43,7 +43,7 @@ _MAX_GAUGE_KM = 50.0
 _W_COVARIATE = 0.6
 _W_GAUGE = 0.4
 
-_TIER_PENALTY = {Tier.T1: 0.0, Tier.T2: 0.05, Tier.T3: 0.25}
+_TIER_PENALTY = {Tier.T1: 0.0, Tier.T2: 0.05, Tier.T3: 0.10}
 
 _HIGH_THRESHOLD = 0.70
 _MEDIUM_THRESHOLD = 0.40
@@ -163,6 +163,12 @@ def support_score(
 
     score = _W_COVARIATE * cov_component + _W_GAUGE * gauge_component
     score = score - _TIER_PENALTY[tier]
+    if tier is Tier.T3:
+        # Below the validated scale nothing is "well-supported". Capping at
+        # moderate (rather than a large penalty that pushed every panchayat to
+        # "low") keeps the label informative: within T3 it still separates
+        # familiar terrain near gauges from unfamiliar, unobserved terrain.
+        score = np.minimum(score, _HIGH_THRESHOLD - 0.01)
     return np.clip(score, 0.0, 1.0)
 
 

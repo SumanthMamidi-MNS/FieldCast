@@ -147,8 +147,11 @@ LAPSE_RATE_C_PER_M = -0.0065
 # Aspect is scored against this to separate windward from leeward slopes.
 MONSOON_FLOW_DEG = 245.0
 
-# Rain occurrence threshold (mm/day). Below this a day counts as dry.
-WET_DAY_THRESHOLD_MM = 0.1
+# Rain occurrence threshold (mm/day): IMD's "rainy day" definition. A lower
+# threshold (0.1 mm) made reanalysis drizzle count as rain on ~92% of monsoon
+# days, so the advisory said "rain likely, hold off spraying" for 2 mm that would
+# never wash a spray off. 2.5 mm is the standard agro-met meaning of a rainy day.
+WET_DAY_THRESHOLD_MM = 2.5
 
 # Predictive quantiles.
 QUANTILES: tuple[float, ...] = (0.1, 0.5, 0.9)

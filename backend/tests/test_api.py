@@ -156,11 +156,20 @@ def test_forecast_is_differentiated_within_the_block(wired):
 
 
 def test_forecast_reconciles_to_the_block_value(wired):
+    """Intensive variables: the area-weighted mean equals the block value."""
     resp = svc.block_forecast(REGION, BLOCK, date(2023, 7, 15), INPUT)
     w = np.array([p.area_km2 for p in resp.panchayats])
-    for key in ("tmax", "precip"):
-        vals = np.array([p.variables[key].value for p in resp.panchayats])
-        assert np.average(vals, weights=w) == pytest.approx(INPUT[key], rel=0.02, abs=0.05)
+    vals = np.array([p.variables["tmax"].value for p in resp.panchayats])
+    assert np.average(vals, weights=w) == pytest.approx(INPUT["tmax"], abs=0.05)
+
+
+def test_rain_reconciliation_does_not_concentrate_the_block_total(wired):
+    """Rain is reconciled in expectation (P x amount), so no single panchayat
+    should absorb a multiple of the block total the way median-matching did."""
+    light = {**INPUT, "precip": 2.0}
+    resp = svc.block_forecast(REGION, BLOCK, date(2023, 7, 15), light)
+    served = np.array([p.variables["precip"].value for p in resp.panchayats])
+    assert served.max() < 10 * light["precip"]
 
 
 def test_every_value_carries_interval_tier_and_support(wired):

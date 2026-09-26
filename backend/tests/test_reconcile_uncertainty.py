@@ -319,3 +319,53 @@ def test_typical_training_terrain_is_well_supported_in_high_dimensions():
     assert np.median(cov) > 0.9
     far = covariate_support(model.mahalanobis(np.full((1, 7), 6.0)), 7)
     assert far[0] < 0.01
+
+
+def test_t3_output_is_never_labelled_well_supported():
+    model, _ = _training_manifold()
+    feats = np.array([[600.0, 5.0, 0.0]])
+    score = support_score(feats, model, np.array([19.0]), np.array([74.0]), Tier.T3)
+    assert support_level(score[0]) is SupportLevel.MEDIUM
+
+
+def test_t3_still_separates_familiar_from_unfamiliar_terrain():
+    """Regression: a large T3 penalty labelled every panchayat 'low'."""
+    model, _ = _training_manifold()
+    lat, lon = np.array([25.0]), np.array([80.0])   # far from every gauge
+    typical = support_score(np.array([[600.0, 5.0, 0.0]]), model, lat, lon, Tier.T3)
+    extreme = support_score(np.array([[1600.0, 35.0, 0.9]]), model, lat, lon, Tier.T3)
+    assert support_level(typical[0]) is SupportLevel.MEDIUM
+    assert support_level(extreme[0]) is SupportLevel.LOW
+
+
+# --------------------------------------------------------------------------
+# Two-stage (rainfall) reconciliation
+# --------------------------------------------------------------------------
+
+
+def test_two_stage_reconciliation_matches_expected_not_median():
+    """Regression: median-matching turned a 1.9 mm block into a 28 mm panchayat.
+
+    With most panchayats unlikely to rain, the mixture median is 0 almost
+    everywhere; forcing medians to the block MEAN piled the total onto one cell.
+    """
+    from backend.pipeline.models.downscaler import mixture_quantiles
+    from backend.pipeline.models.reconcile import reconcile_two_stage
+
+    occ = np.array([0.3, 0.35, 0.4, 0.45, 0.8])
+    cond = {0.1: np.full(5, 1.0), 0.5: np.full(5, 4.0), 0.9: np.full(5, 12.0)}
+    out = reconcile_two_stage(cond, occ, np.ones(5), block_value=1.9)
+
+    expected = np.mean(occ * out[0.5])
+    assert expected == pytest.approx(1.9, rel=1e-6)
+    served = mixture_quantiles(out, occ)[0.5]
+    assert served.max() < 10.0, "no panchayat may absorb the whole block total"
+    assert (served[:4] == 0.0).all(), "unlikely-to-rain panchayats stay dry"
+
+
+def test_two_stage_reconciliation_leaves_a_dry_forecast_alone():
+    from backend.pipeline.models.reconcile import reconcile_two_stage
+
+    cond = {0.1: np.zeros(3), 0.5: np.zeros(3), 0.9: np.zeros(3)}
+    out = reconcile_two_stage(cond, np.array([0.1, 0.2, 0.1]), np.ones(3), block_value=5.0)
+    assert all(np.allclose(v, 0.0) for v in out.values())

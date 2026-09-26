@@ -25,8 +25,12 @@ import pandas as pd
 from backend.app.schemas import Tier
 from backend.config import ARTIFACT_DIR, PROCESSED_DIR, QUANTILES, VARIABLES
 from backend.pipeline.features.build import FEATURE_COLUMNS, add_temporal_features
-from backend.pipeline.models.downscaler import VariableDownscaler, lapse_rate_prior
-from backend.pipeline.models.reconcile import reconcile_quantiles
+from backend.pipeline.models.downscaler import (
+    VariableDownscaler,
+    lapse_rate_prior,
+    mixture_quantiles,
+)
+from backend.pipeline.models.reconcile import reconcile_quantiles, reconcile_two_stage
 from backend.pipeline.models.uncertainty import (
     SupportModel,
     clamp_non_negative,
@@ -164,11 +168,20 @@ class Predictor:
         var = VARIABLES[key]
         block_value = features["block_value"].to_numpy(dtype=float)
 
-        quantiles, occurrence = model.predict(features[FEATURE_COLUMNS], block_value)
-
-        if reconcile_to is not None:
-            w = np.ones(len(features)) if weights is None else np.asarray(weights, dtype=float)
-            quantiles = reconcile_quantiles(quantiles, w, float(reconcile_to), var.reconcile)
+        x = features[FEATURE_COLUMNS]
+        w = np.ones(len(features)) if weights is None else np.asarray(weights, dtype=float)
+        occurrence = model.predict_occurrence(x)
+        conditional = None
+        if occurrence is not None:
+            # Two-stage: reconcile expected rain (P x amount), then form the mixture.
+            conditional = model.predict_quantiles(x, block_value)
+            if reconcile_to is not None:
+                conditional = reconcile_two_stage(conditional, occurrence, w, float(reconcile_to))
+            quantiles = mixture_quantiles(conditional, occurrence)
+        else:
+            quantiles, _ = model.predict(x, block_value)
+            if reconcile_to is not None:
+                quantiles = reconcile_quantiles(quantiles, w, float(reconcile_to), var.reconcile)
 
         lats = features["lat"].to_numpy(dtype=float)
         lons = features["lon"].to_numpy(dtype=float)
@@ -204,6 +217,7 @@ class Predictor:
             "upper": upper,
             "raw_quantiles": quantiles,
             "occurrence": occurrence,
+            "conditional": conditional,
             "support_score": score,
             "nearest_gauge_km": gauge_km,
         }

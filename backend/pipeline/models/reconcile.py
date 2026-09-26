@@ -153,3 +153,28 @@ def differentiation_spread(values: np.ndarray) -> float:
     if finite.size < 2:
         return 0.0
     return float(finite.max() - finite.min())
+
+
+def reconcile_two_stage(
+    conditional: dict[float, np.ndarray],
+    occurrence: np.ndarray,
+    weights: np.ndarray,
+    block_value: float,
+) -> dict[float, np.ndarray]:
+    """Scale if-wet amounts so the area-weighted EXPECTED rain equals the block value.
+
+    The block value is a mean. For zero-inflated rainfall the median sits far
+    below the mean, so forcing medians to match it piled the whole block total
+    onto the few panchayats with a non-zero median (a 1.9 mm block produced a
+    28 mm panchayat). Matching sum(w * P(wet) * amount) instead keeps dry
+    panchayats dry without inflating wet ones.
+    """
+    occ = np.asarray(occurrence, dtype=float)
+    w = np.asarray(weights, dtype=float)
+    median = np.asarray(conditional[0.5], dtype=float)
+    expected = float(np.sum(w * occ * median) / w.sum())
+    if expected < _NEGLIGIBLE_TOTAL:
+        return {q: np.asarray(v, dtype=float).copy() for q, v in conditional.items()}
+    scale = float(np.clip(block_value / expected, 0.0, _MAX_SCALE))
+    out = {q: np.maximum(np.asarray(v, dtype=float) * scale, 0.0) for q, v in conditional.items()}
+    return _enforce_monotonic(out)

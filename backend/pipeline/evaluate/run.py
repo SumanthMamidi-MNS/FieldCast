@@ -49,8 +49,9 @@ from backend.pipeline.evaluate.metrics import (
 )
 from backend.pipeline.features.build import spatial_temporal_split
 from backend.pipeline.geo.terrain import compute_terrain, distance_to_coast_km
+from backend.pipeline.models.downscaler import mixture_quantiles
 from backend.pipeline.models.predictor import Predictor, build_target_features
-from backend.pipeline.models.reconcile import reconcile
+from backend.pipeline.models.reconcile import reconcile, reconcile_two_stage
 
 app = typer.Typer(add_completion=False)
 console = Console()
@@ -111,6 +112,22 @@ def reconcile_by_group(
 # Below this many independent clusters a bootstrap interval is not trustworthy,
 # so we refuse to call a result significant however the interval looks.
 _MIN_CLUSTERS_FOR_SIGNIFICANCE = 8
+
+
+def reconcile_two_stage_by_group(
+    conditional: dict[float, np.ndarray],
+    occurrence: np.ndarray,
+    block_value: np.ndarray,
+    groups: pd.Series,
+) -> np.ndarray:
+    """Served rainfall median after expected-value reconciliation, per (block, day)."""
+    out = np.zeros(len(groups))
+    for _, idx in groups.groupby(groups).groups.items():
+        i = np.asarray(list(idx))
+        cond = {q: v[i] for q, v in conditional.items()}
+        cond = reconcile_two_stage(cond, occurrence[i], np.ones(i.size), float(block_value[i[0]]))
+        out[i] = mixture_quantiles(cond, occurrence[i])[0.5]
+    return out
 
 
 def _verdict(skill: float, lo: float, n_clusters: int) -> str:
@@ -236,7 +253,12 @@ def evaluate_t1(region_key: str, predictor: Predictor, transfer: bool) -> dict:
             extra["B2_lapse_rate"] = lapse_rate_correction(bv, test["elevation_anomaly_m"])
 
         groups = test["block_id"].astype(str) + "|" + test["date"].astype(str)
-        reconciled = reconcile_by_group(pred["median"], bv, groups, VARIABLES[key].reconcile)
+        if pred.get("conditional") is not None:
+            reconciled = reconcile_two_stage_by_group(
+                pred["conditional"], pred["occurrence"], bv, groups
+            )
+        else:
+            reconciled = reconcile_by_group(pred["median"], bv, groups, VARIABLES[key].reconcile)
 
         results[key] = _variable_report(
             key, y, pred, bv, test["block_id"].to_numpy(), extra, reconciled
@@ -419,17 +441,24 @@ def write_markdown(report: dict, path) -> None:
             lines += ["_Not evaluable for this region (no data)._", ""]
             continue
         lines += [
-            "| Variable | n | MAE model | MAE naive | Skill | 90% CI | Coverage 80% | Verdict |",
-            "|---|---:|---:|---:|---:|---|---:|---|",
+            "| Variable | n | MAE model | MAE naive | Skill | 90% CI | Served skill* "
+            "| Coverage 80% | Verdict |",
+            "|---|---:|---:|---:|---:|---|---:|---:|---|",
         ]
         for r in res.values():
             ci = r["skill_ci90"]
             lines.append(
                 f"| {r['label']} ({r['unit']}) | {r['n']:,} | {_fmt(r['model_mae'], 2)} | "
                 f"{_fmt(r['naive_mae'], 2)} | {_fmt(r['skill_vs_naive'])} | "
-                f"[{_fmt(ci[0])}, {_fmt(ci[1])}] | {_fmt(r['interval_coverage_80'], 2)} | "
-                f"{r['verdict']} |"
+                f"[{_fmt(ci[0])}, {_fmt(ci[1])}] | "
+                f"{_fmt(r.get('reconciled_skill_vs_naive', float('nan')))} | "
+                f"{_fmt(r['interval_coverage_80'], 2)} | {r['verdict']} |"
             )
+        lines += [
+            "",
+            "*Served skill: after block-mean reconciliation, i.e. the value the API "
+            "actually returns (T1 only; gauges are not a block).",
+        ]
         lines.append("")
         other = [(r["label"], n, b) for r in res.values() for n, b in r["baselines"].items()]
         if other:

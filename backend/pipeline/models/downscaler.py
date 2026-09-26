@@ -265,14 +265,8 @@ class VariableDownscaler:
         """
         quantiles = self.predict_quantiles(features, block_value)
         occurrence = self.predict_occurrence(features)
-
         if occurrence is not None:
-            for q in quantiles:
-                # A quantile of the mixed distribution: below the dry probability
-                # the quantile of the mixture is zero.
-                dry_prob = 1.0 - occurrence
-                quantiles[q] = np.where(q <= dry_prob, 0.0, quantiles[q])
-
+            quantiles = mixture_quantiles(quantiles, occurrence)
         return quantiles, occurrence
 
     # ------------------------------------------------------------------
@@ -344,6 +338,19 @@ class VariableDownscaler:
             .sort_values("gain", ascending=False)
             .reset_index(drop=True)
         )
+
+
+def mixture_quantiles(
+    conditional: dict[float, np.ndarray], occurrence: np.ndarray
+) -> dict[float, np.ndarray]:
+    """Quantiles of the dry/wet mixture from conditional (if-wet) quantiles.
+
+    Below the dry probability the mixture quantile is zero. This reuses the
+    fitted conditional levels rather than re-deriving (q - dry) / wet levels,
+    which three fitted quantiles cannot supply; it is an approximation.
+    """
+    dry_prob = 1.0 - np.asarray(occurrence, dtype=float)
+    return {q: np.where(q <= dry_prob, 0.0, v) for q, v in conditional.items()}
 
 
 def lapse_rate_prior(elevation_anomaly_m: np.ndarray) -> np.ndarray:

@@ -305,10 +305,11 @@ def _headline(variables: dict[str, VariableForecast], items: list[AdvisoryItem])
     parts: list[str] = []
     if rain is not None:
         p = rain.rain_probability if rain.rain_probability is not None else 0.0
+        amount = f", about {rain.value:.0f} mm" if rain.value >= 0.5 else ""
         if p >= 0.6:
-            parts.append(f"Rain likely ({p:.0%}), about {rain.value:.0f} mm")
+            parts.append(f"Rain likely ({p:.0%}){amount}")
         elif p >= 0.3:
-            parts.append(f"Rain possible ({p:.0%}), about {rain.value:.0f} mm")
+            parts.append(f"Rain possible ({p:.0%}){amount}")
         else:
             parts.append(f"Mostly dry ({p:.0%} rain chance)")
     if tmax is not None:
