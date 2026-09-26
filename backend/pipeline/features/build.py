@@ -163,26 +163,30 @@ def spatial_temporal_split(
     block_col: str = "block_id",
     date_col: str = "date",
     valid_fraction: float = 0.2,
-    test_years: tuple[int, ...] | None = None,
+    test_periods: tuple[tuple[str, str], ...] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Split into train / validation / test with both holdouts applied.
 
-    Test = held-out YEARS (temporal generalisation).
-    Validation = held-out BLOCKS within the training years (spatial generalisation,
-    used for early stopping and probability calibration).
+    Test = held-out SEASONS, given as inclusive date ranges (temporal
+    generalisation). Ranges rather than years, because the dry season runs
+    October to May and crosses a year boundary.
+    Validation = held-out BLOCKS outside the test periods (spatial
+    generalisation, used for early stopping and probability calibration).
     Train = everything else.
 
     Returns (train, valid, test).
     """
     # `is None` rather than a falsy check: an empty tuple is a meaningful value
-    # here (no year-based holdout at all) and `or` would silently replace it with
-    # the default, sending every row into the test split.
-    if test_years is None:
-        test_years = TRAINING_WINDOW.test_years
+    # (no temporal holdout at all) and `or` would silently replace it with the
+    # default, sending rows into the test split.
+    if test_periods is None:
+        test_periods = TRAINING_WINDOW.test_periods
     out = df.copy()
-    years = pd.to_datetime(out[date_col]).dt.year
+    dates = pd.to_datetime(out[date_col])
 
-    is_test = years.isin(test_years).to_numpy()
+    is_test = np.zeros(len(out), dtype=bool)
+    for start, end in test_periods:
+        is_test |= ((dates >= pd.Timestamp(start)) & (dates <= pd.Timestamp(end))).to_numpy()
 
     block_score = out[block_col].map(_block_hash).to_numpy()
     is_valid_block = block_score < valid_fraction

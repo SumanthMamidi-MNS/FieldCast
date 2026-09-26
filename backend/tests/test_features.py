@@ -158,7 +158,7 @@ def test_split_holds_out_whole_blocks_not_random_rows():
     points = _sample_points(n_blocks=20)
     panel = _sample_panel(points, days=10)
     panel = add_block_context(panel)
-    train, valid, _ = spatial_temporal_split(panel, test_years=(2099,))
+    train, valid, _ = spatial_temporal_split(panel, test_periods=(("2099-01-01", "2099-12-31"),))
 
     assert not (set(train["block_id"]) & set(valid["block_id"]))
     assert len(valid) > 0, "validation split is empty; the holdout is not working"
@@ -173,7 +173,7 @@ def test_split_holds_out_whole_years():
         frames.append(f)
     panel = pd.concat(frames, ignore_index=True)
 
-    train, _, test = spatial_temporal_split(panel, test_years=(2022,))
+    train, _, test = spatial_temporal_split(panel, test_periods=(("2022-01-01", "2022-12-31"),))
     assert set(pd.to_datetime(test["date"]).dt.year) == {2022}
     assert 2022 not in set(pd.to_datetime(train["date"]).dt.year)
 
@@ -237,7 +237,7 @@ def test_clean_split_passes_the_leakage_assertion():
         frames.append(f)
     panel = add_block_context(pd.concat(frames, ignore_index=True))
 
-    train, valid, test = spatial_temporal_split(panel, test_years=(2022,))
+    train, valid, test = spatial_temporal_split(panel, test_periods=(("2022-01-01", "2022-12-31"),))
     assert_no_leakage(train, valid, test)
 
 
@@ -309,7 +309,7 @@ def test_feature_table_reports_non_intersecting_coordinates():
         build_feature_table(wl, points, points, "tmax")
 
 
-def test_empty_test_years_means_no_year_holdout_not_the_default():
+def test_empty_test_periods_means_no_holdout_not_the_default():
     """An empty tuple is a real value: "hold out no years".
 
     A falsy `or` check here silently substituted the default test years, which
@@ -317,15 +317,27 @@ def test_empty_test_years_means_no_year_holdout_not_the_default():
     """
     points = _sample_points(n_blocks=10)
     panel = add_block_context(_sample_panel(points, days=5))
-    train, valid, test = spatial_temporal_split(panel, test_years=())
+    train, valid, test = spatial_temporal_split(panel, test_periods=())
     assert len(test) == 0
     assert len(train) > 0 and len(valid) > 0
 
 
-def test_none_test_years_falls_back_to_the_configured_default():
+def test_none_test_periods_falls_back_to_the_configured_default():
     points = _sample_points(n_blocks=10)
     panel = add_block_context(_sample_panel(points, days=5))
-    train, _valid, test = spatial_temporal_split(panel, test_years=None)
-    # Sample data is 2021, default test years are 2022-2023, so nothing is test.
+    train, _valid, test = spatial_temporal_split(panel, test_periods=None)
+    # Sample data is June-July 2021, outside the default test seasons.
     assert len(test) == 0
     assert len(train) > 0
+
+
+def test_test_period_can_cross_a_year_boundary():
+    """The dry test season runs October to May; a year-based split cannot express it."""
+    df = pd.DataFrame(
+        {
+            "block_id": ["B1"] * 4,
+            "date": pd.to_datetime(["2022-09-30", "2022-11-15", "2023-03-01", "2023-06-01"]),
+        }
+    )
+    _, _, test = spatial_temporal_split(df, test_periods=(("2022-10-05", "2023-05-31"),))
+    assert list(test["date"].dt.strftime("%Y-%m")) == ["2022-11", "2023-03"]

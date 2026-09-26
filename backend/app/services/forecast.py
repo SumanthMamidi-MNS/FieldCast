@@ -51,6 +51,16 @@ _MEANINGFUL_SPREAD = {"precip": 1.0, "tmax": 0.3, "tmin": 0.3, "humidity": 2.0, 
 _OUT_OF_SEASON_SUPPORT = 0.5
 
 
+def _trained_months() -> set[int]:
+    """Calendar months covered by at least one training season."""
+    months: set[int] = set()
+    for s in TRAINING_WINDOW.train_seasons:
+        for d in pd.date_range(s.start, s.end, freq="MS"):
+            months.add(d.month)
+        months.add(pd.Timestamp(s.start).month)
+    return months
+
+
 class ForecastError(Exception):
     """Raised for requests that cannot be served; carries an HTTP status."""
 
@@ -257,7 +267,7 @@ def block_forecast(
         ],
         axis=1,
     )
-    in_season = day.month in TRAINING_WINDOW.months
+    in_season = day.month in _trained_months()
     weights = targets["area_km2"].to_numpy(dtype=float)
 
     per_var: dict[str, dict] = {}
@@ -274,7 +284,7 @@ def block_forecast(
         per_var[key] = res
 
     tier_note = TIERS["T3"] + ("" if in_season else
-                               " Outside the June-September season the model was trained on.")
+                               " Outside the months the model was trained on.")
     panchayats: list[PanchayatForecast] = []
     for i, row in targets.iterrows():
         variables: dict[str, VariableForecast] = {}

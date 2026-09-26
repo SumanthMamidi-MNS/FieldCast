@@ -185,7 +185,7 @@ def train_region(
             continue
 
         train, valid, test = spatial_temporal_split(
-            table, test_years=(() if quick else TRAINING_WINDOW.test_years)
+            table, test_periods=(() if quick else TRAINING_WINDOW.test_periods)
         )
         if quick and len(test) == 0:
             # In a short window there may be no held-out year; carve the tail off
@@ -295,25 +295,24 @@ def run(
     step_deg: float = typer.Option(
         TRAINING_WINDOW.grid_step_deg, help="Fine grid spacing in degrees"
     ),
+    features_only: bool = typer.Option(False, help="Build feature tables without training"),
 ) -> None:
     if region not in REGIONS:
         raise typer.BadParameter(f"unknown region {region!r}; have {sorted(REGIONS)}")
 
     cfg = REGIONS[region]
-    if cfg.is_transfer:
-        # Transfer regions are never trained on; only the test season is needed.
-        test_seasons = tuple(
-            s for s in TRAINING_WINDOW.seasons if int(s[0][:4]) in TRAINING_WINDOW.test_years
-        )
-        counts = build_features_only(cfg, test_seasons, step_deg)
-        console.print(f"[green]transfer features built (no training):[/green] {counts}")
+    all_seasons = tuple((s.start, s.end) for s in TRAINING_WINDOW.seasons)
+    if features_only:
+        # Inputs for evaluating another region's models here, with no fitting.
+        counts = build_features_only(cfg, all_seasons, step_deg)
+        console.print(f"[green]features built (no training):[/green] {counts}")
         return
 
     if quick:
         seasons: tuple[tuple[str, str], ...] = (("2022-06-01", "2022-09-30"),)
         console.print("[yellow]QUICK RUN — wiring verification only, numbers are not reportable[/yellow]")
     else:
-        seasons = TRAINING_WINDOW.seasons
+        seasons = all_seasons
 
     summary = train_region(REGIONS[region], seasons, step_deg, quick)
 

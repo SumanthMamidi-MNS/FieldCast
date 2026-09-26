@@ -2,7 +2,7 @@
 
 Run:
     python -m backend.pipeline.evaluate.run --region mh_ghats
-    python -m backend.pipeline.evaluate.run --region ka_transfer --model-region mh_ghats
+    python -m backend.pipeline.evaluate.run --region ka_ghats --model-region mh_ghats
 
 Reporting rules this module enforces:
 
@@ -225,8 +225,9 @@ def evaluate_t1(region_key: str, predictor: Predictor, transfer: bool) -> dict:
             console.print(f"  [yellow]{key}: no feature table at {path.name}[/yellow]")
             continue
         table = pd.read_parquet(path)
-        # On a transfer region every row is out-of-sample; otherwise the held-out season.
-        test = table if transfer else spatial_temporal_split(table)[2]
+        # Always the held-out test seasons, so a transfer run and the region's own
+        # model are scored on exactly the same days.
+        test = spatial_temporal_split(table)[2]
         if test.empty:
             continue
         test = test.reset_index(drop=True)
@@ -289,10 +290,17 @@ def _station_terrain(stations: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([base, terr], axis=1)
 
 
+def _in_periods(dates: pd.Series, periods: tuple[tuple[str, str], ...]) -> pd.Series:
+    mask = pd.Series(False, index=dates.index)
+    for start, end in periods:
+        mask |= (dates >= pd.Timestamp(start)) & (dates <= pd.Timestamp(end))
+    return mask
+
+
 def gauge_datasets(
-    region_key: str, predictor: Predictor, years: set[int]
+    region_key: str, predictor: Predictor, periods: tuple[tuple[str, str], ...]
 ) -> dict[str, tuple[pd.DataFrame, pd.DataFrame]]:
-    """(rows, features) per gauge-validated variable, for monsoon days in `years`.
+    """(rows, features) per gauge-validated variable, for days inside `periods`.
 
     `rows` carries the observation (`value`), `block_value` and `station_id`;
     `features` is aligned row-for-row and built through the served code path.
@@ -318,13 +326,12 @@ def gauge_datasets(
         return {}
     inside = _station_terrain(inside)
 
-    seasons = TRAINING_WINDOW.seasons
     elements = sorted({v.ghcn_element for v in VARIABLES.values() if v.ghcn_element})
     obs = load_station_daily(
-        inside["station_id"].tolist(), seasons[0][0], seasons[-1][1], elements=elements
+        inside["station_id"].tolist(), TRAINING_WINDOW.start, TRAINING_WINDOW.end, elements=elements
     )
     obs["date"] = pd.to_datetime(obs["date"])
-    obs = obs[obs["date"].dt.month.isin(TRAINING_WINDOW.months) & obs["date"].dt.year.isin(years)]
+    obs = obs[_in_periods(obs["date"], periods)]
 
     out = {}
     for key, var in VARIABLES.items():
@@ -344,7 +351,7 @@ def gauge_datasets(
         rows = o.merge(inside, on="station_id").merge(bvals, on=["block_id", "date"])
         rows = rows.dropna(subset=["value", "block_value"]).reset_index(drop=True)
         if len(rows) < 30:
-            console.print(f"  [yellow]gauges {key} {sorted(years)}: only {len(rows)} days; skipped[/yellow]")
+            console.print(f"  [yellow]gauges {key}: only {len(rows)} days; skipped[/yellow]")
             continue
         targets = rows.rename(columns={"latitude": "lat", "longitude": "lon"})
         feats = build_target_features(
@@ -357,8 +364,10 @@ def gauge_datasets(
     return out
 
 
-def calibrate_point_scale(region_key: str, predictor: Predictor, years: set[int]) -> dict:
-    """Interval widening needed at point scale, fitted on gauge-days from `years`.
+def calibrate_point_scale(
+    region_key: str, predictor: Predictor, periods: tuple[tuple[str, str], ...]
+) -> dict:
+    """Interval widening needed at point scale, fitted on gauge-days in `periods`.
 
     The model is trained to reproduce ~16 km grid values, whose spread is far
     smaller than a single rain gauge's. Left alone, the published 80% interval
@@ -368,7 +377,7 @@ def calibrate_point_scale(region_key: str, predictor: Predictor, years: set[int]
     applies to panchayat (T3) output, which sits between grid and point scale, so
     point scale is the conservative reference.
     """
-    data = gauge_datasets(region_key, predictor, years)
+    data = gauge_datasets(region_key, predictor, periods)
     calib = {}
     grid_k = np.round(np.arange(1.0, 10.01, 0.05), 2)
     for key, (rows, feats) in data.items():
@@ -387,17 +396,19 @@ def calibrate_point_scale(region_key: str, predictor: Predictor, years: set[int]
             "factor": k_best,
             "n": len(rows),
             "n_gauges": int(rows["station_id"].nunique()),
-            "years": sorted(years),
+            "periods": [list(p) for p in periods],
         }
         console.print(
             f"  point-scale calibration {key}: k={k_best:.2f} "
-            f"({len(rows)} gauge-days, {calib[key]['n_gauges']} gauges, {sorted(years)})"
+            f"({len(rows)} gauge-days, {calib[key]['n_gauges']} gauges)"
         )
     return calib
 
 
-def evaluate_t2(region_key: str, predictor: Predictor, years: set[int]) -> dict:
-    data = gauge_datasets(region_key, predictor, years)
+def evaluate_t2(
+    region_key: str, predictor: Predictor, periods: tuple[tuple[str, str], ...]
+) -> dict:
+    data = gauge_datasets(region_key, predictor, periods)
     results = {}
     for key, (rows, feats) in data.items():
         pred = predictor.predict_variable(key, feats, Tier.T2)
@@ -489,16 +500,16 @@ def run(
     model_region = model_region or region
     transfer = model_region != region
 
-    test_years = set(TRAINING_WINDOW.test_years)
-    calib_years = {int(s[0][:4]) for s in TRAINING_WINDOW.seasons} - test_years
+    test_periods = TRAINING_WINDOW.test_periods
+    calib_periods = tuple((s.start, s.end) for s in TRAINING_WINDOW.train_seasons)
     calib_path = ARTIFACT_DIR / model_region / "scale_calibration.json"
 
     # Calibration is fitted only on the model's own region, on seasons outside the
     # test set, so the held-out evaluation below stays out-of-sample.
-    if not transfer and recalibrate and calib_years:
-        console.print(f"[bold]Calibrating point-scale intervals[/bold] on {sorted(calib_years)}")
+    if not transfer and recalibrate and calib_periods:
+        console.print("[bold]Calibrating point-scale intervals[/bold] on training seasons")
         raw = Predictor.load(region, model_region_key=model_region)
-        calib = calibrate_point_scale(region, raw, calib_years)
+        calib = calibrate_point_scale(region, raw, calib_periods)
         calib_path.write_text(json.dumps(calib, indent=2), encoding="utf-8")
 
     predictor = Predictor.load(region, model_region_key=model_region)
@@ -511,7 +522,7 @@ def run(
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "scale_calibration": predictor.scale_calibration,
         "T1": evaluate_t1(region, predictor, transfer),
-        "T2": evaluate_t2(region, predictor, test_years),
+        "T2": evaluate_t2(region, predictor, test_periods),
     }
 
     stem = f"evaluation_{region}" + (f"_from_{model_region}" if transfer else "")

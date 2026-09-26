@@ -191,13 +191,19 @@ def test_higher_panchayat_is_colder(wired):
     assert by_elev[0].variables["tmax"].value > by_elev[-1].variables["tmax"].value
 
 
-def test_out_of_season_lowers_support(wired):
+def test_configured_seasons_cover_the_whole_year():
+    """Monsoon + dry-season training removes the out-of-season limitation."""
+    assert svc._trained_months() == set(range(1, 13))
+
+
+def test_out_of_season_lowers_support(wired, monkeypatch):
+    monkeypatch.setattr(svc, "_trained_months", lambda: {6, 7, 8, 9})
     monsoon = svc.block_forecast(REGION, BLOCK, date(2023, 7, 15), INPUT)
     winter = svc.block_forecast(REGION, BLOCK, date(2023, 1, 15), INPUT)
     s_m = np.mean([p.variables["tmax"].confidence.support_score for p in monsoon.panchayats])
     s_w = np.mean([p.variables["tmax"].confidence.support_score for p in winter.panchayats])
     assert s_w < s_m
-    assert "season" in winter.panchayats[0].variables["tmax"].confidence.tier_note
+    assert "months the model was trained on" in winter.panchayats[0].variables["tmax"].confidence.tier_note
 
 
 def test_unknown_variable_is_rejected(wired):

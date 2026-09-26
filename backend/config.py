@@ -6,7 +6,7 @@ not editing pipeline code. That is what makes the Karnataka transfer test cheap.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 # --------------------------------------------------------------------------
@@ -58,17 +58,19 @@ REGIONS: dict[str, Region] = {
         districts=("Pune", "Satara", "Ahmadnagar", "Nashik", "Raigad", "Kolhapur", "Sangli"),
         role="train",
     ),
-    "ka_transfer": Region(
-        key="ka_transfer",
+    "ka_ghats": Region(
+        key="ka_ghats",
         state_name="Karnataka",
         datameet_code="ka",
         districts=("Belgaum", "Dharwad", "Uttara Kannada", "Shimoga", "Chikmagalur", "Hassan"),
-        role="transfer",
+        # Trained on its own data for serving; also the target of the transfer
+        # test, where Maharashtra-trained models are evaluated here.
+        role="train",
     ),
 }
 
 PRIMARY_REGION = "mh_ghats"
-TRANSFER_REGION = "ka_transfer"
+TRANSFER_REGION = "ka_ghats"
 
 
 # --------------------------------------------------------------------------
@@ -168,36 +170,65 @@ TERRAIN_STENCIL_M = 1000.0
 # Training window
 # --------------------------------------------------------------------------
 @dataclass(frozen=True)
-class TrainingWindow:
-    """Seasonal training windows.
+class Season:
+    """A contiguous date range fetched and modelled as one unit."""
 
-    Monsoon seasons only (June-September). Open-Meteo's free tier counts each
-    location-fortnight as one call against a ~10k/day budget, so six full years at
-    the ~9km spacing needed for within-block variance (~108k calls) is not
-    feasible. The monsoon is also when rainfall advisories matter most and where
-    the rain-shadow gradient is strongest. Out-of-season requests are served but
-    flagged as lower support (see app services).
+    start: str
+    end: str
+    kind: str            # "monsoon" (Jun-Sep) or "dry" (Oct-May)
+    test: bool = False   # held out for evaluation; never trained on
+
+    @property
+    def label(self) -> str:
+        return f"{self.kind} {self.start[:4]}" + (f"-{self.end[2:4]}" if self.kind == "dry" else "")
+
+
+@dataclass(frozen=True)
+class TrainingWindow:
+    """Training and test seasons, covering the whole year.
+
+    Four monsoons and one dry season train the models; the following monsoon and
+    dry season are held out as test periods. The dry test season starts five days
+    after the last training monsoon ends, which keeps the 3-day embargo against
+    day-to-day weather autocorrelation.
+
+    Open-Meteo's free tier (10k weighted calls/day) is the constraint: fetching
+    all of this takes several days of quota, which `pipeline.fetch` handles by
+    waiting and resuming from cache.
     """
 
-    # One training season and one held-out test season. A third season (2021)
-    # can be appended when the API budget allows; the cache makes that additive.
-    seasons: tuple[tuple[str, str], ...] = (
-        ("2022-06-01", "2022-09-30"),
-        ("2023-06-01", "2023-09-30"),
+    seasons: tuple[Season, ...] = (
+        Season("2019-06-01", "2019-09-30", "monsoon"),
+        Season("2020-06-01", "2020-09-30", "monsoon"),
+        Season("2021-06-01", "2021-09-30", "monsoon"),
+        Season("2021-10-01", "2022-05-31", "dry"),
+        Season("2022-06-01", "2022-09-30", "monsoon"),
+        Season("2022-10-05", "2023-05-31", "dry", test=True),
+        Season("2023-06-01", "2023-09-30", "monsoon", test=True),
     )
-    test_years: tuple[int, ...] = field(default=(2023,))
-    # Grid spacing (degrees). ~16km gives ~3 fine points per block, the minimum
+    # Grid spacing (degrees). ~16km gives ~3.5 fine points per block, the minimum
     # for a non-degenerate within-block anomaly, while fitting the call budget.
     grid_step_deg: float = 0.15
-    months: tuple[int, ...] = (6, 7, 8, 9)
+
+    @property
+    def train_seasons(self) -> tuple[Season, ...]:
+        return tuple(s for s in self.seasons if not s.test)
+
+    @property
+    def test_seasons(self) -> tuple[Season, ...]:
+        return tuple(s for s in self.seasons if s.test)
+
+    @property
+    def test_periods(self) -> tuple[tuple[str, str], ...]:
+        return tuple((s.start, s.end) for s in self.test_seasons)
 
     @property
     def start(self) -> str:
-        return self.seasons[0][0]
+        return min(s.start for s in self.seasons)
 
     @property
     def end(self) -> str:
-        return self.seasons[-1][1]
+        return max(s.end for s in self.seasons)
 
 
 TRAINING_WINDOW = TrainingWindow()
