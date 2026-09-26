@@ -1,90 +1,179 @@
 /**
- * Design tokens.
+ * FieldCast design tokens.
  *
- * There is no design.md in this repo, so these are derived from the stated
- * constraints rather than invented freely: high contrast for a projector in a
- * bright room, no meaning carried by red/green alone, and text that stays
- * legible at 4.5:1 or better against its own background.
+ * Direction: calm, agricultural, trustworthy. Deep green-teal is the brand and
+ * the interactive colour; greys carry a faint green tint so the page reads as
+ * one family; a single warm ochre accent marks "officer attention" moments
+ * (bulletin active, focus on the date). Everything else is left to the map,
+ * whose colour ramps must never compete with chrome.
  *
- * Advisory action colours are always paired with a glyph and a word, so a
- * viewer with deuteranopia reads the shape and the label, not the hue.
+ * Contrast: every text token passes WCAG AA (4.5:1) on --surface and --bg.
+ * Advisory and confidence colours are always paired with a glyph and a word.
  */
 
 :root {
-  /* Surfaces */
-  --canvas: #eef1f5;
-  --surface: #ffffff;
-  --surface-sunken: #f5f7fa;
-  --surface-inverse: #10151b;
+  /* Brand — deep green / teal */
+  --brand-900: #0a3b34;
+  --brand-800: #0c4a41;
+  --brand-700: #0f5a4f; /* 8.1:1 on white */
+  --brand-600: #13705f; /* 5.9:1 on white */
+  --brand-500: #1a8a76;
+  --brand-300: #86c4b4;
+  --brand-200: #bfe0d6;
+  --brand-100: #deefe9;
+  --brand-50: #eff7f4;
 
-  /* Ink — all pass 4.5:1 on --surface */
-  --ink: #10151b;
-  --ink-muted: #4a5560;
-  --ink-inverse: #ffffff;
+  /* Warm accent — ochre */
+  --accent-700: #8f4a0a; /* 6.6:1 on white */
+  --accent-600: #b3600f;
+  --accent-500: #d9822b;
+  --accent-100: #fbe9d3;
+  --accent-50: #fdf5eb;
 
-  /* Structure */
-  --line: #cdd5de;
-  --line-strong: #97a3b0;
+  /* Neutrals — green-tinted greys */
+  --gray-0: #ffffff;
+  --gray-25: #fafbfa;
+  --gray-50: #f3f5f4;
+  --gray-100: #e8ecea;
+  --gray-200: #d7ddda;
+  --gray-300: #bac3bf;
+  --gray-400: #909b96;
+  --gray-500: #66716c; /* 4.9:1 on white */
+  --gray-600: #4d5853;
+  --gray-700: #36403c;
+  --gray-800: #232b28;
+  --gray-900: #131a17;
 
-  /* Brand / interactive */
-  --accent: #0f4c8a;
-  --accent-strong: #0a3765;
-  --accent-wash: #e6eefa;
+  /* Semantic surfaces */
+  --bg: var(--gray-50);
+  --surface: var(--gray-0);
+  --surface-2: var(--gray-25);
+  --surface-sunken: var(--gray-50);
+  --surface-inverse: var(--gray-900);
+  --border: var(--gray-200);
+  --border-subtle: var(--gray-100);
+  --border-strong: var(--gray-300);
+  /* Input boundaries need 3:1 against white (WCAG 1.4.11). */
+  --border-input: #8a948f;
 
-  /* Advisory actions. Hue is never the only cue — see AdvisoryList. */
-  --action-proceed: #1a6b3c;
-  --action-proceed-wash: #e4f3ea;
-  --action-caution: #8a5300;
-  --action-caution-wash: #fdf1dd;
-  --action-avoid: #a01722;
-  --action-avoid-wash: #fce9ea;
-  --action-none: #4a5560;
-  --action-none-wash: #eef1f5;
+  /* Semantic text */
+  --text: var(--gray-900);
+  --text-2: var(--gray-600);
+  --text-3: var(--gray-500);
+  --text-inverse: #ffffff;
+  --link: var(--brand-600);
 
-  /* Confidence. Neutral by design: confidence must not compete with the
-     choropleth's own colour scale. */
-  --support-high: #1a6b3c;
-  --support-medium: #8a5300;
-  --support-low: #6a2c8a;
+  /* Interactive */
+  --primary: var(--brand-700);
+  --primary-hover: var(--brand-800);
+  --primary-soft: var(--brand-50);
+  --primary-soft-2: var(--brand-100);
+  --focus-color: var(--brand-500);
 
-  /* Tier badges */
-  --tier-t1: #0f4c8a;
-  --tier-t2: #1a6b3c;
-  --tier-t3: #6a2c8a;
+  /* Advisory actions — hue is never the only cue */
+  --act-proceed: #1d6f42;
+  --act-proceed-bg: #e8f4ec;
+  --act-proceed-line: #b5dcc3;
+  --act-caution: #8a5100;
+  --act-caution-bg: #fdf3e0;
+  --act-caution-line: #efd29c;
+  --act-avoid: #b0261b;
+  --act-avoid-bg: #fcebe9;
+  --act-avoid-line: #f1bdb7;
+  --act-none: var(--gray-600);
+  --act-none-bg: var(--gray-50);
+  --act-none-line: var(--gray-200);
 
-  /* Typography — sized up a step from a typical dashboard, for projection. */
+  /* Confidence (support) — kept muted so it never competes with the map */
+  --sup-high: var(--brand-700);
+  --sup-medium: #7a5a12;
+  --sup-low: #7b3b8f;
+
+  /* Evidence tiers */
+  --tier-t1: #2c5b95;
+  --tier-t1-bg: #e8eff8;
+  --tier-t2: #1d6f42;
+  --tier-t2-bg: #e8f4ec;
+  --tier-t3: #6d3d8a;
+  --tier-t3-bg: #f2eaf6;
+
+  /* Outcome colours for the Evidence page */
+  --win: #1d6f42;
+  --win-soft: #e8f4ec;
+  --maybe: #8a5100;
+  --maybe-soft: #fdf3e0;
+  --loss: #b0261b;
+  --loss-soft: #fcebe9;
+
+  /* Map ink (boundaries, selection) and rain blue (matches the rain ramp) */
+  --map-ink: #131a17;
+  --rain: #2f7fb8;
+  --map-bg: #eef1ef;
+  --veil: rgb(243 245 244 / 60%);
+
+  /* Typography */
   --font-sans:
-    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
-    'Noto Sans Devanagari', sans-serif;
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari',
+    sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace;
 
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.375rem;
-  --text-2xl: 1.75rem;
-  --text-3xl: 2.25rem;
+  --fs-2xs: 0.6875rem; /* 11 */
+  --fs-xs: 0.75rem; /* 12 */
+  --fs-sm: 0.8125rem; /* 13 */
+  --fs-md: 0.875rem; /* 14 */
+  --fs-base: 1rem; /* 16 */
+  --fs-lg: 1.125rem; /* 18 */
+  --fs-xl: 1.25rem; /* 20 */
+  --fs-2xl: 1.5rem; /* 24 */
+  --fs-3xl: 2rem; /* 32 */
+  --fs-4xl: 2.5rem; /* 40 */
 
-  /* Spacing */
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 12px;
-  --s4: 16px;
-  --s5: 24px;
-  --s6: 32px;
-  --s7: 48px;
+  --lh-tight: 1.2;
+  --lh-snug: 1.35;
+  --lh-body: 1.55;
 
-  --radius: 8px;
-  --radius-sm: 5px;
-  --radius-lg: 14px;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
 
-  --shadow-sm: 0 1px 2px rgb(16 21 27 / 10%);
-  --shadow: 0 2px 10px rgb(16 21 27 / 12%);
-  --shadow-lg: 0 8px 28px rgb(16 21 27 / 18%);
+  /* Spacing (4px grid) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
 
-  --focus: 3px solid #b45c00;
-  --focus-offset: 2px;
+  /* Radii */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+
+  /* Elevation */
+  --shadow-xs: 0 1px 2px rgb(19 26 23 / 6%);
+  --shadow-sm: 0 1px 3px rgb(19 26 23 / 8%), 0 1px 2px rgb(19 26 23 / 5%);
+  --shadow-md: 0 4px 12px rgb(19 26 23 / 9%), 0 1px 3px rgb(19 26 23 / 6%);
+  --shadow-lg: 0 12px 32px rgb(19 26 23 / 14%), 0 2px 6px rgb(19 26 23 / 6%);
+
+  /* Layout */
+  --topbar-h: 56px;
+  --controlbar-h: 64px;
+  --sidebar-w: 400px;
+  --page-max: 1080px;
+  --control-h: 38px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
 }
 
 *,
@@ -93,20 +182,27 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  background: var(--canvas);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font-sans);
-  font-size: var(--text-base);
-  line-height: 1.5;
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
@@ -114,27 +210,63 @@ h2,
 h3,
 h4 {
   margin: 0;
-  line-height: 1.25;
-  font-weight: 650;
+  line-height: var(--lh-tight);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.011em;
 }
 
-p {
+p,
+ul,
+ol,
+figure,
+dl,
+dd {
   margin: 0;
 }
 
+ul,
+ol {
+  padding: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+img,
+svg {
+  display: block;
+}
+
 :where(a) {
-  color: var(--accent);
+  color: var(--link);
+  text-underline-offset: 2px;
 }
 
-:where(button, a, input, select, summary, [tabindex]):focus-visible {
-  outline: var(--focus);
-  outline-offset: var(--focus-offset);
-  border-radius: var(--radius-sm);
+/* One focus ring everywhere: visible on white, on the map and on brand fills. */
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
 }
 
-/* Never remove focus rings; only ever replace them with a better one. */
-:where(button, a, input, select):focus:not(:focus-visible) {
+:where(button, a, input, select, textarea):focus:not(:focus-visible) {
   outline: none;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
 }
 
 .visually-hidden {
@@ -156,5 +288,6 @@ p {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

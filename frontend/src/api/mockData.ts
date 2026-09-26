@@ -375,6 +375,7 @@ export function listGeometry(blockId: string): PanchayatGeometry[] | null {
   return unitsFor(spec).map((u) => ({
     panchayat_id: u.id,
     panchayat_name: u.name,
+    unit_type: 'village_cluster',
     block_id: spec.block_id,
     geometry: u.polygon,
     centroid_lat: u.lat,
@@ -614,6 +615,7 @@ export function buildForecast(
     return {
       panchayat_id: u.id,
       panchayat_name: u.name,
+      unit_type: 'village_cluster',
       block_id: spec.block_id,
       block_name: spec.block_name,
       latitude: u.lat,

@@ -368,3 +368,10 @@ def test_health_endpoint(served):
     r = TestClient(main.app).get("/api/health")
     assert r.status_code == 200
     assert r.json()["regions_available"] == [REGION]
+
+
+def test_regions_report_replay_windows_from_the_bundle(served):
+    body = TestClient(main.app).get("/api/regions").json()
+    mh = next(r for r in body if r["key"] == REGION)
+    assert mh["replay_windows"] == [["2023-07-15", "2023-07-16"]]
+    assert mh["live_days_ahead"] == 15

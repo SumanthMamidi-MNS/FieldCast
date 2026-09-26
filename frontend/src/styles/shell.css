@@ -1,0 +1,176 @@
+/* App frame: top bar, page containers, banners. */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* The forecast is an app-style screen on desktop: nothing scrolls but the sidebar. */
+@media (min-width: 768px) {
+  .app.route-forecast {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+.route-forecast-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* `hidden` must win over the display above. */
+.route-forecast-wrap[hidden] {
+  display: none;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  height: var(--topbar-h);
+  padding: 0 var(--sp-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+.topbar-brand {
+  display: inline-flex;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--r-md);
+}
+
+.topbar-nav ul {
+  display: flex;
+  gap: 2px;
+  list-style: none;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.nav-link.is-active {
+  background: var(--brand-50);
+  color: var(--brand-800);
+  font-weight: var(--fw-semibold);
+}
+
+.mock-banner {
+  padding: var(--sp-2) var(--sp-5);
+  background: var(--accent-50);
+  border-bottom: 1px solid var(--accent-100);
+  color: var(--accent-700);
+  font-size: var(--fs-sm);
+}
+
+.page-main {
+  flex: 1;
+  outline: none;
+}
+
+.page {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--sp-10) var(--sp-6) var(--sp-16);
+}
+
+.page-head {
+  max-width: 760px;
+}
+
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-600);
+}
+
+.page-title {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.page-lead {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-lg);
+  line-height: 1.55;
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+
+@media (max-width: 1023px) {
+  .logo-tagline {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .topbar {
+    padding: 0 var(--sp-3) 0 var(--sp-4);
+    gap: var(--sp-2);
+  }
+
+  .logo {
+    gap: 7px;
+  }
+
+  .logo svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .logo-name {
+    font-size: var(--fs-base);
+  }
+
+  .nav-link {
+    height: 34px;
+    padding: 0 7px;
+    font-size: var(--fs-sm);
+  }
+
+  .page {
+    padding: var(--sp-6) var(--sp-4) var(--sp-12);
+  }
+
+  .page-title {
+    font-size: 1.625rem;
+  }
+
+  .page-lead {
+    font-size: var(--fs-base);
+  }
+}

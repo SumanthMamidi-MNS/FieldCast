@@ -16,6 +16,12 @@ export type Tier = 'T1' | 'T2' | 'T3'
 /** schemas.SupportLevel */
 export type SupportLevel = 'high' | 'medium' | 'low'
 
+/**
+ * `unit_type` on PanchayatForecast / PanchayatGeometry. The backend types it
+ * as `str` defaulting to "village_cluster"; these are the two values it writes.
+ */
+export type UnitType = 'gram_panchayat' | 'village_cluster'
+
 /** schemas.AdvisoryAction */
 export type AdvisoryAction = 'proceed' | 'caution' | 'avoid' | 'no_guidance'
 
@@ -85,6 +91,8 @@ export interface Advisory {
 export interface PanchayatForecast {
   panchayat_id: string
   panchayat_name: string
+  /** Real LGD gram-panchayat boundary, or an approximate village cluster. */
+  unit_type: UnitType
   block_id: string
   block_name: string
 
@@ -160,6 +168,8 @@ export type GeoJsonGeometry = GeoJsonPolygon | GeoJsonMultiPolygon
 export interface PanchayatGeometry {
   panchayat_id: string
   panchayat_name: string
+  /** Real LGD gram-panchayat boundary, or an approximate village cluster. */
+  unit_type: UnitType
   block_id: string
   /** Raw GeoJSON geometry object (Polygon / MultiPolygon) */
   geometry: GeoJsonGeometry
@@ -193,3 +203,75 @@ export interface HealthResponse {
   regions_available: string[]
   offline_mode: boolean
 }
+
+/** main.RegionInfo — `GET /api/regions`. */
+export interface RegionInfo {
+  key: string
+  state: string
+  districts: string[]
+  /** True when this region has its own trained models. */
+  served: boolean
+}
+
+/*
+ * `GET /api/evaluation/reports` returns every `reports/evaluation_*.json`
+ * verbatim, keyed by file stem. The backend types it only as `dict`, so the
+ * shapes below mirror what `backend/pipeline/evaluate` writes. Everything that
+ * a report could plausibly omit is optional: the Evidence page must degrade
+ * gracefully rather than crash on an older or partial report.
+ */
+
+/** Rain / no-rain skill, present on rainfall rows. */
+export interface EvaluationOccurrence {
+  brier: number
+  brier_skill_vs_climatology?: number
+  /** Brier score of the naive "block value decides wet/dry" call. */
+  brier_naive_block: number
+  base_rate?: number
+  /** [mean forecast probability, observed frequency, count] per bin. */
+  reliability?: [number, number, number][]
+}
+
+export interface EvaluationBaseline {
+  mae: number
+  /** 1 - model_mae / this baseline's MAE; > 0 means the model beats it. */
+  model_skill_vs_this: number
+}
+
+/** One variable at one tier of one report. */
+export interface EvaluationRow {
+  variable: string
+  label: string
+  unit: string
+  n: number
+  /** Blocks (T1) or gauges (T2) the bootstrap resamples over. */
+  n_clusters?: number
+  model_mae: number
+  naive_mae: number
+  /** 1 - model_mae / naive_mae. */
+  skill_vs_naive: number
+  /** 90% cluster-bootstrap interval of skill_vs_naive. */
+  skill_ci90?: [number, number]
+  /** Plain-language verdict written by the evaluator. */
+  verdict?: string
+  interval_coverage_80?: number
+  interval_width?: number
+  mean_support?: number
+  baselines?: Record<string, EvaluationBaseline>
+  /** Skill after block-mean reconciliation — what the API actually serves. */
+  reconciled_skill_vs_naive?: number
+  occurrence?: EvaluationOccurrence
+}
+
+export interface EvaluationReport {
+  region: string
+  model_region?: string
+  /** True when the models were trained on a different region. */
+  transfer?: boolean
+  generated_at?: string
+  T1?: Record<string, EvaluationRow>
+  T2?: Record<string, EvaluationRow>
+}
+
+/** `GET /api/evaluation/reports`, keyed by report file stem. */
+export type EvaluationReports = Record<string, EvaluationReport>

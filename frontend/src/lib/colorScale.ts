@@ -22,6 +22,8 @@ export type ScaleKind =
   | 'sequential-teal'
   | 'sequential-purple'
   | 'diverging-temp'
+  | 'diverging-humidity'
+  | 'diverging-wind'
 
 export interface Rgb {
   r: number
@@ -41,10 +43,14 @@ const RAMPS: Record<ScaleKind, string[]> = {
   'sequential-purple': ['#f5f2f8', '#dcd9ec', '#bfb3d9', '#a184c0', '#8a55a6', '#6f2a86', '#4a1259'],
   // ColorBrewer RdBu, reversed: cool blue → neutral → warm red. Colour-blind safe.
   'diverging-temp': ['#2166ac', '#67a9cf', '#d1e5f0', '#f4f2ee', '#fddbc7', '#ef8a62', '#b2182b'],
+  // ColorBrewer BrBG: drier than the block (brown) -> neutral -> more humid (teal).
+  'diverging-humidity': ['#8c510a', '#d8b365', '#f6e8c3', '#f4f2ee', '#c7eae5', '#5ab4ac', '#01665e'],
+  // ColorBrewer PuOr: calmer than the block (orange) -> neutral -> windier (purple).
+  'diverging-wind': ['#b35806', '#f1a340', '#fee0b6', '#f4f2ee', '#d8daeb', '#998ec3', '#542788'],
 }
 
 export function isDiverging(kind: ScaleKind): boolean {
-  return kind === 'diverging-temp'
+  return kind.startsWith('diverging')
 }
 
 export interface ScaleDomain {
@@ -210,4 +216,58 @@ export function niceDomain(
   if (opts.zeroAnchored) min = Math.min(0, min)
 
   return opts.diverging && block !== undefined ? { min, max, mid: block } : { min, max }
+}
+
+/**
+ * A domain fitted to one block, relative to its official value.
+ *
+ * The product exists to show differences *inside* a block, so a fixed or
+ * zero-anchored range is wrong: wind of 30.8-32.8 km/h on a 0-35 scale is one
+ * flat colour. Instead:
+ *
+ * - **sequential** (rain): 0 -> the block's own maximum (village or block value).
+ * - **diverging** (everything else): centred on the block value, reaching as
+ *   far as the furthest village on either side, so the neutral colour *is* the
+ *   official forecast and both sides share one unit-per-colour step.
+ *
+ * `minReach` is the variable's meaningful resolution. Without it a block whose
+ * villages differ by 0.02 degC would be painted in full red and blue, turning
+ * rounding noise into an apparent finding. With it, sub-resolution differences
+ * stay close to neutral, which is the honest picture.
+ */
+export interface RelativeDomain extends ScaleDomain {
+  /** Real lowest and highest village values (NaN when there are none). */
+  dataMin: number
+  dataMax: number
+  /** The official block value. */
+  block: number
+}
+
+export function relativeDomain(
+  values: number[],
+  blockValue: number,
+  opts: { diverging: boolean; minReach: number },
+): RelativeDomain {
+  const finite = values.filter((v) => Number.isFinite(v))
+  const has = finite.length > 0
+  const block = Number.isFinite(blockValue) ? blockValue : has ? mean(finite) : 0
+  const dataMin = has ? Math.min(...finite) : Number.NaN
+  const dataMax = has ? Math.max(...finite) : Number.NaN
+  const minReach = Number.isFinite(opts.minReach) && opts.minReach > 0 ? opts.minReach : 1e-6
+
+  if (!opts.diverging) {
+    const top = Math.max(has ? dataMax : 0, block, minReach)
+    return { min: 0, max: top, dataMin, dataMax, block }
+  }
+
+  const reach = Math.max(
+    has ? Math.abs(dataMax - block) : 0,
+    has ? Math.abs(block - dataMin) : 0,
+    minReach,
+  )
+  return { min: block - reach, max: block + reach, mid: block, dataMin, dataMax, block }
+}
+
+function mean(values: number[]): number {
+  return values.reduce((a, b) => a + b, 0) / values.length
 }

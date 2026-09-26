@@ -85,15 +85,30 @@ class RegionInfo(BaseModel):
     state: str
     districts: list[str]
     served: bool = Field(description="True when this region has its own trained models")
+    replay_windows: list[tuple[str, str]] = Field(
+        default_factory=list,
+        description="Inclusive date ranges with recorded block values (historical replay)",
+    )
+    live_days_back: int = 1
+    live_days_ahead: int = 15
 
 
 @app.get("/api/regions", response_model=list[RegionInfo])
 def regions() -> list[RegionInfo]:
     served = set(rt.served_regions())
-    return [
-        RegionInfo(key=r.key, state=r.state_name, districts=list(r.districts), served=r.key in served)
-        for r in REGIONS.values()
-    ]
+    out = []
+    for r in REGIONS.values():
+        windows = rt.get_runtime(r.key).replay_windows if r.key in served else []
+        out.append(
+            RegionInfo(
+                key=r.key,
+                state=r.state_name,
+                districts=list(r.districts),
+                served=r.key in served,
+                replay_windows=windows,
+            )
+        )
+    return out
 
 
 @app.get("/api/blocks", response_model=list[BlockSummary])

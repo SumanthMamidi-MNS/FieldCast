@@ -7,14 +7,13 @@
  * still gets MapLibre's collision engine — so colliding labels are *dropped*,
  * never stacked, and it uses the page's own system font.
  *
- * The visual language matches the rest of the dashboard: the value is a dark
- * ink pill with white text (4.5:1+ on every ramp), ringed in white so it lifts
- * off a dark fill; the village name is a light pill with dark text.
+ * Values are small, light pills that stay out of the colour's way; the
+ * hovered or selected village gets a dark name pill above its value.
  */
 
 import type { PatternImage } from './mapPatterns'
 
-const INK = '#10151b'
+const INK = '#131a17'
 const PAPER = '#ffffff'
 
 function pixelRatio(): number {
@@ -37,13 +36,13 @@ interface Pill {
   ring: string
 }
 
-const PAD_X = 6
-const RING = 1.25
+const PAD_X = 5
+const RING = 1
 
 function measure(ctx: CanvasRenderingContext2D, p: Pill, font: string) {
   ctx.font = `${p.weight} ${p.size}px ${font}`
   const w = Math.ceil(ctx.measureText(p.text).width) + PAD_X * 2
-  const h = Math.round(p.size * 1.5)
+  const h = Math.round(p.size * 1.6)
   return { w, h }
 }
 
@@ -89,7 +88,7 @@ function drawPills(pills: Pill[], gap: number): PatternImage | null {
   pills.forEach((p, i) => {
     const s = sizes[i] as { w: number; h: number }
     const x = (cssW - s.w) / 2
-    roundRect(ctx, x, y, s.w, s.h, 4)
+    roundRect(ctx, x, y, s.w, s.h, s.h / 2)
     ctx.fillStyle = p.bg
     ctx.fill()
     ctx.lineWidth = RING
@@ -110,10 +109,14 @@ function drawPills(pills: Pill[], gap: number): PatternImage | null {
   }
 }
 
-/** The always-on value chip, e.g. "28.0°C". */
+/**
+ * The always-on value chip, e.g. "28.0°C": small, light and quiet, so the
+ * colour carries the pattern and the number is there when you look for it.
+ * Dark ink on a near-white pill stays above 4.5:1 on every ramp colour.
+ */
 export function buildValueLabel(valueText: string): PatternImage | null {
   return drawPills(
-    [{ text: valueText, size: 13, weight: 800, bg: INK, fg: PAPER, ring: PAPER }],
+    [{ text: valueText, size: 11, weight: 600, bg: 'rgba(255,255,255,0.9)', fg: INK, ring: 'rgba(19,26,23,0.22)' }],
     0,
   )
 }
@@ -122,8 +125,8 @@ export function buildValueLabel(valueText: string): PatternImage | null {
 export function buildFocusLabel(name: string, valueText: string): PatternImage | null {
   return drawPills(
     [
-      { text: name, size: 12.5, weight: 650, bg: PAPER, fg: INK, ring: INK },
-      { text: valueText, size: 13, weight: 800, bg: INK, fg: PAPER, ring: PAPER },
+      { text: name, size: 12, weight: 600, bg: INK, fg: PAPER, ring: PAPER },
+      { text: valueText, size: 11, weight: 600, bg: PAPER, fg: INK, ring: INK },
     ],
     2,
   )

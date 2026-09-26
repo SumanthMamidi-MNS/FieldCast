@@ -13,6 +13,7 @@ function poly(id: string, coordinates: number[][][]): PanchayatGeometry {
   return {
     panchayat_id: id,
     panchayat_name: id,
+    unit_type: 'village_cluster',
     block_id: 'b',
     geometry: { type: 'Polygon', coordinates },
     centroid_lat: 0,

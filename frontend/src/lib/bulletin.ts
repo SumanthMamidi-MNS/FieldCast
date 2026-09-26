@@ -68,9 +68,5 @@ export function validateBulletin(raw: Record<string, string>): BulletinResult {
   return { values, errors, ok: Object.keys(errors).length === 0 }
 }
 
-/** True when the string is a real calendar date in YYYY-MM-DD form. */
-export function isIsoDate(text: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false
-  const d = new Date(`${text}T00:00:00Z`)
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === text
-}
+/** Re-exported: the one definition lives with the other date rules. */
+export { isIsoDate } from './dates'

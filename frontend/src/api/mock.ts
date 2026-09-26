@@ -10,8 +10,10 @@ import type {
   BaselineComparison,
   BlockForecastResponse,
   BlockSummary,
+  EvaluationReports,
   HealthResponse,
   PanchayatGeometry,
+  RegionInfo,
 } from '../types/api'
 import { buildForecast, health, listBaselines, listBlocks, listGeometry } from './mockData'
 
@@ -31,23 +33,32 @@ function delay<T>(value: T, ms = LATENCY_MS): Promise<T> {
 }
 
 export const mockApi = {
-  async getBlocks(): Promise<BlockSummary[]> {
+  async getRegions(): Promise<RegionInfo[]> {
+    const blocks = listBlocks()
+    const districts = [...new Set(blocks.map((b) => b.district))]
+    return delay([
+      { key: 'mh_ghats', state: blocks[0]?.state ?? 'Maharashtra', districts, served: true },
+    ])
+  },
+
+  async getBlocks(_region: string): Promise<BlockSummary[]> {
     return delay(listBlocks())
   },
 
-  async getBlockGeometry(blockId: string): Promise<PanchayatGeometry[]> {
+  async getBlockGeometry(_region: string, blockId: string): Promise<PanchayatGeometry[]> {
     const geometry = listGeometry(blockId)
     if (!geometry) throw new ApiError(404, `No geometry for block ${blockId}`)
     return delay(geometry)
   },
 
-  async getBlockForecast(blockId: string, date: string): Promise<BlockForecastResponse> {
+  async getBlockForecast(_region: string, blockId: string, date: string): Promise<BlockForecastResponse> {
     const forecast = buildForecast(blockId, date)
     if (!forecast) throw new ApiError(404, `No forecast for block ${blockId}`)
     return delay(forecast, LATENCY_MS + 140)
   },
 
   async postBlockForecast(
+    _region: string,
     blockId: string,
     input: { date: string; block_values: Record<string, number> },
   ): Promise<BlockForecastResponse> {
@@ -59,8 +70,13 @@ export const mockApi = {
     return delay(forecast, LATENCY_MS + 140)
   },
 
-  async getBaselines(): Promise<BaselineComparison[]> {
+  async getBaselines(_region: string): Promise<BaselineComparison[]> {
     return delay(listBaselines())
+  },
+
+  /** The mock has no evaluation reports; the Evidence page shows its empty state. */
+  async getEvaluationReports(): Promise<EvaluationReports> {
+    return delay({})
   },
 
   async getHealth(): Promise<HealthResponse> {

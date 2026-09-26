@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type { PanchayatForecast, PanchayatGeometry } from '../types/api'
-import type { ColorScale } from '../lib/colorScale'
-import { NO_DATA_COLOR } from '../lib/colorScale'
-import { FILL_OPACITY, confidenceStyle } from '../lib/confidenceTexture'
-import { buildHatchPattern, buildStipplePattern } from '../lib/mapPatterns'
-import { buildFocusLabel, buildValueLabel } from '../lib/mapLabels'
-import { boundsOf, fitPadding, labelImageId, labelSortKey } from '../lib/mapGeometry'
-import { formatValue, type VariableKey } from '../lib/variables'
+import type { PanchayatForecast, PanchayatGeometry } from '../../types/api'
+import type { ColorScale } from '../../lib/colorScale'
+import { NO_DATA_COLOR } from '../../lib/colorScale'
+import { FILL_OPACITY, confidenceStyle } from '../../lib/confidenceTexture'
+import { buildHatchPattern, buildStipplePattern } from '../../lib/mapPatterns'
+import { buildFocusLabel, buildValueLabel } from '../../lib/mapLabels'
+import { boundsOf, fitPadding, labelImageId, labelSortKey } from '../../lib/mapGeometry'
+import { formatValue, type VariableKey } from '../../lib/variables'
+import { MapTooltip } from './MapTooltip'
 
 interface MapViewProps {
   geometry: PanchayatGeometry[]
@@ -17,14 +18,16 @@ interface MapViewProps {
   scale: ColorScale
   selectedId: string | null
   onSelect: (panchayatId: string) => void
+  /** Extra padding (px) so the fitted block clears overlaid controls. */
+  overlayPadding?: { top: number; bottom: number; left: number; right: number }
 }
 
 const SOURCE = 'panchayats'
 const LABEL_SOURCE = 'panchayat-labels'
 const NONE = '__none__'
 
-/** Dark ink used for boundaries and the selection ring; matches --ink. */
-const INK = '#10151b'
+/** Dark ink for boundaries and the selection ring; matches --map-ink. */
+const INK = '#131a17'
 const OSM_ATTRIBUTION =
   '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
 
@@ -32,14 +35,10 @@ const OSM_ATTRIBUTION =
  * Keyless raster basemap.
  *
  * A vector style would look better but every free one needs an API key, and a
- * demo that dies when a key expires — or when venue wifi blocks the key server —
- * is not a demo. OSM raster tiles need no key. Attribution is mandatory under
- * the OSM tile usage policy and is always on screen, never behind a toggle;
- * `maxzoom` is capped and the basemap is desaturated so the choropleth reads on
- * a projector.
- *
- * For anything beyond a pilot, this should move to a self-hosted or commercial
- * tile source — the OSM tile CDN is not for production traffic.
+ * demo that dies when a key expires is not a demo. OSM raster tiles need no
+ * key. Attribution is mandatory under the OSM tile usage policy and is always
+ * on screen; the basemap is desaturated so the choropleth reads on a projector.
+ * Beyond a pilot, this should move to a self-hosted or commercial tile source.
  */
 const BASEMAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -53,11 +52,12 @@ const BASEMAP_STYLE: maplibregl.StyleSpecification = {
     },
   },
   layers: [
+    { id: 'bg', type: 'background', paint: { 'background-color': '#eef1ef' } },
     {
       id: 'osm',
       type: 'raster',
       source: 'osm',
-      paint: { 'raster-saturation': -0.55, 'raster-contrast': -0.08, 'raster-opacity': 0.9 },
+      paint: { 'raster-saturation': -0.7, 'raster-contrast': -0.1, 'raster-opacity': 0.85 },
     },
   ],
 }
@@ -107,7 +107,7 @@ function buildData(
         name: g.panchayat_name,
         value,
         fillColor: Number.isFinite(value) ? scale.color(value) : NO_DATA_COLOR,
-        support: variable?.confidence.support ?? 'low',
+        support: variable?.confidence.support ?? 'none',
       }
       return { type: 'Feature' as const, id: g.panchayat_id, properties: props, geometry: g.geometry }
     }),
@@ -120,9 +120,7 @@ function buildData(
     features: forecasts.flatMap((f) => {
       if (!Number.isFinite(f.longitude) || !Number.isFinite(f.latitude)) return []
       const variable = f.variables[variableKey]
-      const valueText = variable
-        ? formatValue(variable.value, variableKey, variable.unit)
-        : 'no data'
+      const valueText = variable ? formatValue(variable.value, variableKey, variable.unit) : 'no data'
       const name = f.panchayat_name
       const valueImage = labelImageId('value', valueText)
       const focusImage = labelImageId('focus', name, valueText)
@@ -155,11 +153,22 @@ function prefersReducedMotion(): boolean {
   )
 }
 
+/** Touch-first devices need two-finger pan so the map does not trap page scroll. */
+function isCoarsePointer(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches
+  )
+}
+
 /** Hovered and selected ids, de-duplicated, never empty (MapLibre needs a literal). */
 function focusIds(hovered: string | null, selected: string | null): string[] {
   const ids = [hovered, selected].filter((x): x is string => typeof x === 'string')
   return ids.length ? [...new Set(ids)] : [NONE]
 }
+
+const NO_PAD = { top: 0, bottom: 0, left: 0, right: 0 }
 
 export function MapView({
   geometry,
@@ -168,25 +177,34 @@ export function MapView({
   scale,
   selectedId,
   onSelect,
+  overlayPadding = NO_PAD,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const selectRef = useRef(onSelect)
   const hoveredRef = useRef<string | null>(null)
   const selectedRef = useRef<string | null>(selectedId)
   const geometryRef = useRef(geometry)
+  const paddingRef = useRef(overlayPadding)
   const [ready, setReady] = useState(false)
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
 
   selectRef.current = onSelect
   selectedRef.current = selectedId
   geometryRef.current = geometry
+  paddingRef.current = overlayPadding
 
   const data = useMemo(
     () => buildData(geometry, forecasts, variableKey, scale),
     [geometry, forecasts, variableKey, scale],
   )
+  const hovered = useMemo(
+    () => forecasts.find((f) => f.panchayat_id === hoveredId) ?? null,
+    [forecasts, hoveredId],
+  )
 
-  /** Fit the camera to the whole block, so the block fills the map. */
+  /** Fit the camera to the whole block, clear of the overlaid controls. */
   const fitToBlock = useCallback((animate: boolean) => {
     const map = mapRef.current
     const container = containerRef.current
@@ -195,8 +213,17 @@ export function MapView({
     if (!bounds) return
     const { clientWidth: w, clientHeight: h } = container
     if (w === 0 || h === 0) return
+    const base = fitPadding(w, h)
+    const extra = paddingRef.current
+    // Overlay padding only when enough map is left over to show the block well.
+    const room = w - extra.left - extra.right - base * 2 > 220 && h - extra.top - extra.bottom - base * 2 > 180
     map.fitBounds(bounds, {
-      padding: fitPadding(w, h),
+      padding: {
+        top: base + (room ? extra.top : 0),
+        bottom: base + (room ? extra.bottom : 0),
+        left: base + (room ? extra.left : 0),
+        right: base + (room ? extra.right : 0),
+      },
       maxZoom: 13,
       duration: animate && !prefersReducedMotion() ? 600 : 0,
     })
@@ -206,11 +233,28 @@ export function MapView({
   const applyFocus = useCallback(() => {
     const map = mapRef.current
     if (!map || !map.getLayer('panchayat-label-focus')) return
-    const ids = focusIds(hoveredRef.current, selectedRef.current)
+    // The hover card already names the hovered village; the map label follows the selection.
+    const ids = focusIds(null, selectedRef.current)
     const inFocus: maplibregl.FilterSpecification = ['in', ['get', 'id'], ['literal', ids]]
     map.setFilter('panchayat-label-focus', inFocus)
     map.setFilter('panchayat-label-value', ['!', inFocus])
     map.setFilter('panchayat-hover', ['==', ['get', 'id'], hoveredRef.current ?? NONE])
+  }, [])
+
+  const moveTooltip = useCallback((x: number, y: number) => {
+    const el = tooltipRef.current
+    const container = containerRef.current
+    if (!el || !container) return
+    const pad = 14
+    const w = el.offsetWidth
+    const h = el.offsetHeight
+    const cw = container.clientWidth
+    const ch = container.clientHeight
+    let left = x + pad
+    let top = y + pad
+    if (left + w > cw - 8) left = x - w - pad
+    if (top + h > ch - 8) top = y - h - pad
+    el.style.transform = `translate(${Math.max(8, left)}px, ${Math.max(8, top)}px)`
   }, [])
 
   // --- Init, once. ---------------------------------------------------------
@@ -220,16 +264,18 @@ export function MapView({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: BASEMAP_STYLE,
-      center: [73.85, 18.2],
-      zoom: 9,
+      center: [74.3, 18.6],
+      zoom: 7,
       attributionControl: false,
-      // Stops the map from swallowing page scroll on a phone.
-      cooperativeGestures: true,
+      cooperativeGestures: isCoarsePointer(),
+      dragRotate: false,
+      pitchWithRotate: false,
     })
     mapRef.current = map
+    map.touchZoomRotate.disableRotation()
 
     map.addControl(
-      new maplibregl.AttributionControl({ compact: false, customAttribution: OSM_ATTRIBUTION }),
+      new maplibregl.AttributionControl({ compact: true, customAttribution: OSM_ATTRIBUTION }),
       'bottom-right',
     )
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
@@ -248,19 +294,15 @@ export function MapView({
       map.addSource(SOURCE, { type: 'geojson', data: empty })
       map.addSource(LABEL_SOURCE, { type: 'geojson', data: empty })
 
-      // 1. Value → colour.
+      // 1. Value → colour. Opacity is constant: confidence is NOT encoded here.
       map.addLayer({
         id: 'panchayat-fill',
         type: 'fill',
         source: SOURCE,
-        paint: {
-          'fill-color': ['get', 'fillColor'],
-          // Constant. Confidence is NOT encoded here — see confidenceTexture.ts.
-          'fill-opacity': FILL_OPACITY,
-        },
+        paint: { 'fill-color': ['get', 'fillColor'], 'fill-opacity': FILL_OPACITY },
       })
 
-      // 2. Confidence → texture, as a separate overlay so it cannot alter hue.
+      // 2. Confidence → texture, a separate overlay so it cannot alter hue.
       map.addLayer({
         id: 'panchayat-texture-medium',
         type: 'fill',
@@ -276,9 +318,7 @@ export function MapView({
         paint: { 'fill-pattern': 'confidence-hatch-low', 'fill-opacity': 0.95 },
       })
 
-      // 3. Boundaries: a two-tone hairline (white casing + dark core), the same
-      //    trick the texture uses. The temperature scale is centred on the block
-      //    value, so many fills sit near white — a white-only line vanished there.
+      // 3. Boundaries: white casing + dark hairline, readable on every fill.
       map.addLayer({
         id: 'panchayat-outline-casing',
         type: 'line',
@@ -309,8 +349,7 @@ export function MapView({
         },
       })
 
-      // 4. Hover and selection. Selection is a thick dark ring on a white
-      //    casing, so it reads on the palest and the darkest fill alike.
+      // 4. Hover and selection rings.
       map.addLayer({
         id: 'panchayat-hover',
         type: 'line',
@@ -325,7 +364,7 @@ export function MapView({
         source: SOURCE,
         filter: ['==', ['get', 'id'], NONE],
         layout: { 'line-join': 'round' },
-        paint: { 'line-color': '#ffffff', 'line-width': 8 },
+        paint: { 'line-color': '#ffffff', 'line-width': 7 },
       })
       map.addLayer({
         id: 'panchayat-selected',
@@ -333,13 +372,11 @@ export function MapView({
         source: SOURCE,
         filter: ['==', ['get', 'id'], NONE],
         layout: { 'line-join': 'round' },
-        paint: { 'line-color': INK, 'line-width': 4 },
+        paint: { 'line-color': INK, 'line-width': 3.5 },
       })
 
-      // 5. Labels. Symbol collision drops labels that would overlap instead of
-      //    piling them up; larger panchayats win (symbol-sort-key), and zooming
-      //    in reveals the rest. Names appear only for the hovered / selected
-      //    village — the full list is in the side panel.
+      // 5. Labels. Collisions drop labels rather than stacking them; larger
+      //    villages win, and zooming in reveals the rest.
       map.addLayer({
         id: 'panchayat-label-value',
         type: 'symbol',
@@ -348,12 +385,10 @@ export function MapView({
           'icon-image': ['get', 'valueImage'],
           'icon-allow-overlap': false,
           'icon-ignore-placement': false,
-          'icon-padding': 4,
+          'icon-padding': 3,
           'symbol-sort-key': ['get', 'sortKey'],
         },
       })
-      // Above the value layer, so it is placed first and always wins; any value
-      // chip it would cover is dropped rather than stacked under it.
       map.addLayer({
         id: 'panchayat-label-focus',
         type: 'symbol',
@@ -363,7 +398,7 @@ export function MapView({
           'icon-image': ['get', 'focusImage'],
           'icon-allow-overlap': true,
           'icon-ignore-placement': false,
-          'icon-padding': 4,
+          'icon-padding': 3,
         },
       })
 
@@ -377,13 +412,24 @@ export function MapView({
         const next = typeof id === 'string' ? id : null
         if (next !== hoveredRef.current) {
           hoveredRef.current = next
+          setHoveredId(next)
           applyFocus()
         }
+        moveTooltip(e.point.x, e.point.y)
       })
       map.on('mouseleave', 'panchayat-fill', () => {
         map.getCanvas().style.cursor = ''
         hoveredRef.current = null
+        setHoveredId(null)
         applyFocus()
+      })
+      // A drag or zoom should not leave a stale card behind.
+      map.on('movestart', () => {
+        if (hoveredRef.current) {
+          hoveredRef.current = null
+          setHoveredId(null)
+          applyFocus()
+        }
       })
 
       setReady(true)
@@ -394,13 +440,12 @@ export function MapView({
       mapRef.current = null
       setReady(false)
     }
-  }, [applyFocus])
+  }, [applyFocus, moveTooltip])
 
   // --- Data + label images. ------------------------------------------------
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-
     for (const img of data.images) {
       if (map.hasImage(img.id)) continue
       const built = img.build()
@@ -457,9 +502,9 @@ export function MapView({
         ref={containerRef}
         className="map-canvas"
         role="region"
-        aria-label="Panchayat map. Select a village here or from the list below."
+        aria-label="Village map. Every village is also listed, with the same values, in the panel beside it."
       />
-      {!ready && <div className="map-loading">Loading map…</div>}
+      <MapTooltip ref={tooltipRef} forecast={hovered} variableKey={variableKey} scale={scale} />
     </div>
   )
 }

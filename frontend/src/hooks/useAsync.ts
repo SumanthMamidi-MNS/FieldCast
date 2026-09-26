@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '../api/client'
 
 export interface AsyncState<T> {
@@ -11,6 +11,11 @@ export interface AsyncState<T> {
   slow: boolean
 }
 
+export interface AsyncResult<T> extends AsyncState<T> {
+  /** Run the request again with the same inputs (the error-state "Try again"). */
+  reload: () => void
+}
+
 /** First panchayat request per block fetches terrain lazily and can take seconds. */
 const SLOW_MS = 2000
 
@@ -19,7 +24,9 @@ const SLOW_MS = 2000
  * dependency change, so switching blocks quickly can never paint the wrong
  * block's numbers over the right block's map.
  */
-export function useAsync<T>(fn: () => Promise<T>, deps: unknown[], enabled = true): AsyncState<T> {
+export function useAsync<T>(fn: () => Promise<T>, deps: unknown[], enabled = true): AsyncResult<T> {
+  const [attempt, setAttempt] = useState(0)
+  const reload = useCallback(() => setAttempt((n) => n + 1), [])
   const [state, setState] = useState<AsyncState<T>>({
     data: null,
     loading: enabled,
@@ -61,7 +68,7 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[], enabled = tru
       window.clearTimeout(slowTimer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, enabled])
+  }, [...deps, enabled, attempt])
 
-  return state
+  return { ...state, reload }
 }

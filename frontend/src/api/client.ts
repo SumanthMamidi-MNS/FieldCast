@@ -14,8 +14,10 @@ import type {
   BaselineComparison,
   BlockForecastResponse,
   BlockSummary,
+  EvaluationReports,
   HealthResponse,
   PanchayatGeometry,
+  RegionInfo,
 } from '../types/api'
 import { ApiError, mockApi } from './mock'
 
@@ -28,19 +30,25 @@ export interface BlockInput {
 }
 
 export interface WeatherApi {
-  getBlocks(): Promise<BlockSummary[]>
-  getBlockGeometry(blockId: string): Promise<PanchayatGeometry[]>
-  getBlockForecast(blockId: string, date: string): Promise<BlockForecastResponse>
-  postBlockForecast(blockId: string, input: BlockInput): Promise<BlockForecastResponse>
-  getBaselines(): Promise<BaselineComparison[]>
+  getRegions(): Promise<RegionInfo[]>
+  getBlocks(region: string): Promise<BlockSummary[]>
+  getBlockGeometry(region: string, blockId: string): Promise<PanchayatGeometry[]>
+  getBlockForecast(region: string, blockId: string, date: string): Promise<BlockForecastResponse>
+  postBlockForecast(
+    region: string,
+    blockId: string,
+    input: BlockInput,
+  ): Promise<BlockForecastResponse>
+  getBaselines(region: string): Promise<BaselineComparison[]>
+  getEvaluationReports(): Promise<EvaluationReports>
   getHealth(): Promise<HealthResponse>
 }
 
 /** Real API unless explicitly switched to the mock. */
 export const USING_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
-/** Region key the backend trains and serves (backend/config.py PRIMARY_REGION). */
-export const REGION = import.meta.env.VITE_REGION ?? 'mh_ghats'
+/** Region shown on first visit (backend/config.py PRIMARY_REGION). */
+export const DEFAULT_REGION = import.meta.env.VITE_REGION ?? 'mh_ghats'
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
@@ -92,24 +100,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-const q = `region=${encodeURIComponent(REGION)}`
+const q = (region: string) => `region=${encodeURIComponent(region)}`
 const blockPath = (id: string) => `/api/blocks/${encodeURIComponent(id)}`
 
 const httpApi: WeatherApi = {
-  getBlocks: () => request<BlockSummary[]>(`/api/blocks?${q}`),
-  getBlockGeometry: (blockId) =>
-    request<PanchayatGeometry[]>(`${blockPath(blockId)}/panchayats?${q}`),
-  getBlockForecast: (blockId, date) =>
+  getRegions: () => request<RegionInfo[]>('/api/regions'),
+  getBlocks: (region) => request<BlockSummary[]>(`/api/blocks?${q(region)}`),
+  getBlockGeometry: (region, blockId) =>
+    request<PanchayatGeometry[]>(`${blockPath(blockId)}/panchayats?${q(region)}`),
+  getBlockForecast: (region, blockId, date) =>
     request<BlockForecastResponse>(
-      `${blockPath(blockId)}/forecast?date=${encodeURIComponent(date)}&${q}`,
+      `${blockPath(blockId)}/forecast?date=${encodeURIComponent(date)}&${q(region)}`,
     ),
-  postBlockForecast: (blockId, input) =>
-    request<BlockForecastResponse>(`${blockPath(blockId)}/forecast?${q}`, {
+  postBlockForecast: (region, blockId, input) =>
+    request<BlockForecastResponse>(`${blockPath(blockId)}/forecast?${q(region)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
     }),
-  getBaselines: () => request<BaselineComparison[]>(`/api/evaluation?${q}`),
+  getBaselines: (region) => request<BaselineComparison[]>(`/api/evaluation?${q(region)}`),
+  getEvaluationReports: () => request<EvaluationReports>('/api/evaluation/reports'),
   getHealth: () => request<HealthResponse>('/api/health'),
 }
 
@@ -120,7 +130,3 @@ export const api: WeatherApi = USING_MOCK ? mockApi : httpApi
  * dashboard opens on something the backend can actually serve.
  */
 export const DEFAULT_DATE = '2023-07-20'
-
-export const DATE_HINT =
-  'Available: 1 June – 30 September in 2022 or 2023 (past monsoon seasons replayed from records), ' +
-  'or from yesterday up to 15 days ahead (live forecast).'

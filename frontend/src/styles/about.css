@@ -1,0 +1,332 @@
+/* How it works page. */
+
+.prose-section {
+  margin-top: var(--sp-12);
+}
+
+.prose-section > h2 {
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--sp-4);
+}
+
+.prose {
+  max-width: 70ch;
+}
+
+.prose p {
+  font-size: var(--fs-base);
+  line-height: 1.65;
+  color: var(--gray-700);
+}
+
+.prose p + p {
+  margin-top: var(--sp-3);
+}
+
+.prose-section > p {
+  margin-top: var(--sp-3);
+}
+
+/* --- Diagram ---------------------------------------------------------------------- */
+.diagram {
+  margin: var(--sp-2) 0 var(--sp-6);
+}
+
+.diagram-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.5fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--sp-3);
+}
+
+.diagram-card,
+.diagram-terrain {
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.diagram-terrain svg {
+  width: 100%;
+  height: auto;
+  margin-top: var(--sp-2);
+}
+
+.diagram-step {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-600);
+}
+
+.diagram-card-title {
+  margin-top: 4px;
+  font-weight: var(--fw-semibold);
+}
+
+.diagram-big {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-4xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--rain);
+}
+
+.diagram-big span {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--text-2);
+  letter-spacing: 0;
+}
+
+.diagram-note {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.diagram-arrow {
+  display: grid;
+  place-items: center;
+  color: var(--gray-400);
+}
+
+.diagram-villages-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.diagram-villages-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.diagram-villages-list strong {
+  margin-left: auto;
+  color: var(--rain);
+  font-size: var(--fs-base);
+}
+
+.v-dot {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--map-ink);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  flex: none;
+}
+
+.diagram-svg-label {
+  font-size: 15px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+.diagram-svg-sub {
+  font-size: 13px;
+  fill: var(--text-2);
+}
+
+.diagram-villages circle {
+  fill: #fff;
+  stroke: var(--map-ink);
+  stroke-width: 2.5;
+}
+
+.diagram-villages text {
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--text);
+}
+
+.diagram-caption {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+/* --- Confidence and tier cards ------------------------------------------------------ */
+.conf-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+  list-style: none;
+}
+
+.conf-card {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.conf-card h3,
+.tier-card h3 {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+}
+
+.conf-card p,
+.tier-card p {
+  margin-top: 4px;
+  font-size: var(--fs-md);
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.prose-section > .muted.small {
+  margin-top: var(--sp-3);
+}
+
+.tier-cards {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  list-style: none;
+}
+
+.tier-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.tier-card.tier-t1,
+.tier-card.tier-t2,
+.tier-card.tier-t3 {
+  background: var(--surface);
+}
+
+.tier-card-code {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  font-weight: var(--fw-bold);
+  color: #fff;
+}
+
+.tier-card.tier-t1 .tier-card-code {
+  background: var(--tier-t1);
+}
+
+.tier-card.tier-t2 .tier-card-code {
+  background: var(--tier-t2);
+}
+
+.tier-card.tier-t3 .tier-card-code {
+  background: var(--tier-t3);
+}
+
+.tier-card h3 {
+  color: var(--text);
+}
+
+/* --- Sources and limits ------------------------------------------------------------------- */
+.sources div {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.sources div:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.sources dt {
+  font-weight: var(--fw-semibold);
+}
+
+.sources dd {
+  color: var(--text-2);
+}
+
+.sources + .muted {
+  margin-top: var(--sp-3);
+}
+
+.limits {
+  display: grid;
+  counter-reset: lim;
+  list-style: none;
+  max-width: 76ch;
+}
+
+.limits li {
+  position: relative;
+  padding: var(--sp-3) 0 var(--sp-3) 40px;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--gray-700);
+}
+
+.limits li::before {
+  counter-increment: lim;
+  content: counter(lim);
+  position: absolute;
+  left: 0;
+  top: var(--sp-3);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-2);
+}
+
+@media (max-width: 900px) {
+  .diagram-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .diagram-arrow {
+    transform: rotate(90deg);
+    height: 28px;
+  }
+
+  .conf-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .prose-section {
+    margin-top: var(--sp-10);
+  }
+
+  .sources div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}

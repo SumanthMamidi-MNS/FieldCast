@@ -18,6 +18,7 @@ export interface PatternImage {
 }
 
 const TILE = 16 // device pixels; 8 CSS px at pixelRatio 2
+const STIPPLE_TILE = 26 // 13 CSS px
 const PIXEL_RATIO = 2
 
 const DARK = 'rgba(14, 19, 25, 0.92)'
@@ -70,13 +71,16 @@ export function buildHatchPattern(): PatternImage | null {
  * it stays legible when the map is zoomed out to the whole block.
  */
 export function buildStipplePattern(): PatternImage | null {
-  const ctx = createContext(TILE)
+  // A wider tile than the hatch: most villages are "moderate", and a dense
+  // stipple over a whole block drowns the colour it sits on.
+  const size = STIPPLE_TILE
+  const ctx = createContext(size)
   if (!ctx) return null
-  ctx.clearRect(0, 0, TILE, TILE)
+  ctx.clearRect(0, 0, size, size)
 
   const dots: [number, number][] = [
-    [4, 4],
-    [12, 12],
+    [size / 4, size / 4],
+    [(size * 3) / 4, (size * 3) / 4],
   ]
   for (const [x, y] of dots) {
     ctx.beginPath()
@@ -88,7 +92,7 @@ export function buildStipplePattern(): PatternImage | null {
     ctx.fillStyle = DARK
     ctx.fill()
   }
-  return toImage(ctx, TILE)
+  return toImage(ctx, size)
 }
 
 /**
@@ -103,11 +107,11 @@ export function textureSvgDefs(): string {
       <line x1="8" y1="-1" x2="-1" y2="8" stroke="${DARK}" stroke-width="1.6" />
       <line x1="12" y1="-1" x2="3" y2="8" stroke="${LIGHT}" stroke-width="1.6" />
     </pattern>
-    <pattern id="tex-stipple-medium" width="8" height="8" patternUnits="userSpaceOnUse">
-      <circle cx="2" cy="2" r="1.5" fill="${LIGHT}" />
-      <circle cx="2" cy="2" r="0.9" fill="${DARK}" />
-      <circle cx="6" cy="6" r="1.5" fill="${LIGHT}" />
-      <circle cx="6" cy="6" r="0.9" fill="${DARK}" />
+    <pattern id="tex-stipple-medium" width="13" height="13" patternUnits="userSpaceOnUse">
+      <circle cx="3.25" cy="3.25" r="1.5" fill="${LIGHT}" />
+      <circle cx="3.25" cy="3.25" r="0.9" fill="${DARK}" />
+      <circle cx="9.75" cy="9.75" r="1.5" fill="${LIGHT}" />
+      <circle cx="9.75" cy="9.75" r="0.9" fill="${DARK}" />
     </pattern>
   `
 }

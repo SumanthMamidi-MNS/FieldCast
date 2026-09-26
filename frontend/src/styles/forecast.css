@@ -1,0 +1,461 @@
+/* Forecast page: map + sidebar layout and the map's overlays. */
+
+.forecast {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.forecast-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--sidebar-w);
+  flex: 1;
+  min-height: 0;
+  outline: none;
+}
+
+@media (min-width: 1600px) {
+  .forecast-body {
+    grid-template-columns: minmax(0, 1fr) 440px;
+  }
+}
+
+/* Tablet: give the map more of the width. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .forecast-body {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+}
+
+.map-panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: var(--map-bg);
+}
+
+.map-shell,
+.map-shell > .map-canvas {
+  /* Beats maplibre-gl.css, which sets .maplibregl-map { position: relative }. */
+  position: absolute;
+  inset: 0;
+}
+
+.sidebar {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  scrollbar-gutter: stable;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.sidebar.is-refreshing {
+  opacity: 0.55;
+}
+
+/* --- Overlays ------------------------------------------------------------------ */
+.map-overlay {
+  position: absolute;
+  z-index: 5;
+}
+
+.map-overlay-top {
+  top: var(--sp-3);
+  left: var(--sp-3);
+  right: 56px;
+  pointer-events: none;
+}
+
+.map-overlay-top > * {
+  pointer-events: auto;
+}
+
+.map-overlay-legend {
+  left: var(--sp-3);
+  bottom: var(--sp-3);
+  width: 256px;
+  max-height: calc(100% - 72px);
+  overflow: auto;
+  border-radius: var(--r-lg);
+}
+
+.map-overlay-center {
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4);
+  pointer-events: none;
+}
+
+.map-overlay-center > * {
+  pointer-events: auto;
+}
+
+.map-overlay-center:has(.status-card) {
+  background: var(--veil);
+  backdrop-filter: blur(1.5px);
+  pointer-events: auto;
+}
+
+/* --- Variable switcher ------------------------------------------------------------ */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.segment {
+  height: 32px;
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.segment:hover:not(:disabled):not(.is-on) {
+  background: var(--gray-100);
+  color: var(--text);
+}
+
+.segment.is-on {
+  background: var(--brand-700);
+  color: #fff;
+}
+
+.segment:disabled {
+  opacity: 0.4;
+}
+
+/* --- Legend ------------------------------------------------------------------------- */
+.legend {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.legend-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--sp-3) 0 14px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: transparent;
+  text-align: left;
+  color: var(--text-2);
+}
+
+.legend-toggle-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.legend-unit {
+  font-weight: var(--fw-regular);
+  color: var(--text-3);
+}
+
+.legend-body {
+  padding: 0 14px 14px;
+}
+
+.legend-plain {
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.legend-ramp-wrap {
+  position: relative;
+  margin-top: var(--sp-3);
+  height: 20px;
+}
+
+.legend-ramp {
+  position: absolute;
+  inset: 5px 0;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgb(19 26 23 / 12%);
+}
+
+.legend-mark {
+  position: absolute;
+  top: 2px;
+  width: 2px;
+  height: 16px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+
+.legend-mark.is-data {
+  background: var(--gray-700);
+  box-shadow: 0 0 0 1px #fff;
+  height: 12px;
+  top: 4px;
+}
+
+.legend-mark.is-block {
+  top: 0;
+  width: 3px;
+  height: 20px;
+  background: var(--map-ink);
+  box-shadow: 0 0 0 1.5px #fff;
+}
+
+.legend-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: var(--fs-2xs);
+  color: var(--text-3);
+}
+
+.legend-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.legend-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.legend-stats div:nth-child(2) {
+  align-items: center;
+  text-align: center;
+}
+
+.legend-stats div:last-child {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.legend-stats dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-2xs);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.legend-stats dd {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+
+.legend-stats .is-block dd {
+  font-weight: var(--fw-bold);
+}
+
+.legend-block-key,
+.band-block-key {
+  display: inline-block;
+  width: 3px;
+  height: 11px;
+  background: var(--map-ink);
+  border-radius: 1px;
+}
+
+.legend-conf {
+  margin-top: var(--sp-3);
+}
+
+.legend-conf-title {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-2);
+}
+
+.legend-conf-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 6px;
+  list-style: none;
+}
+
+.legend-conf-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+/* --- Hover card ------------------------------------------------------------------------ */
+.map-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 8;
+  display: grid;
+  gap: 4px;
+  min-width: 184px;
+  max-width: 240px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.map-tooltip.is-on {
+  opacity: 1;
+}
+
+.map-tooltip-name {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  line-height: 1.25;
+}
+
+.map-tooltip-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.map-tooltip-value strong {
+  font-size: var(--fs-base);
+}
+
+.map-tooltip-sub {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.map-tooltip-hint {
+  font-size: var(--fs-2xs);
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* --- Loading card ---------------------------------------------------------------------- */
+.loading-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  max-width: 360px;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.loading-card .spinner {
+  margin-top: 2px;
+}
+
+.loading-title {
+  font-weight: var(--fw-semibold);
+}
+
+.loading-sub {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+/* --- MapLibre controls, restyled to match ------------------------------------------------ */
+.maplibregl-ctrl-group {
+  border-radius: 10px !important;
+  box-shadow: var(--shadow-md) !important;
+  border: 1px solid var(--border);
+}
+
+.maplibregl-ctrl-group button {
+  width: 34px !important;
+  height: 34px !important;
+}
+
+.maplibregl-ctrl-attrib {
+  font-size: var(--fs-2xs);
+}
+
+/* --- Phone ----------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .forecast-body {
+    display: block;
+  }
+
+  .map-panel {
+    height: 55vh;
+    height: 55svh;
+    min-height: 320px;
+  }
+
+  .sidebar {
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    scroll-margin-top: var(--topbar-h);
+    scrollbar-gutter: auto;
+  }
+
+  .map-overlay-top {
+    top: var(--sp-2);
+    left: var(--sp-2);
+    right: 52px;
+  }
+
+  .map-overlay-top {
+    right: var(--sp-2);
+  }
+
+  .segment {
+    height: 30px;
+    padding: 0 9px;
+    font-size: var(--fs-xs);
+  }
+
+  /* Pinch-zoom replaces the +/- buttons on a phone, freeing the top edge. */
+  .maplibregl-ctrl-top-right {
+    display: none;
+  }
+
+  .map-overlay-legend {
+    left: var(--sp-2);
+    bottom: var(--sp-2);
+    width: min(256px, calc(100% - 64px));
+    max-height: calc(100% - 60px);
+  }
+
+  .map-tooltip {
+    display: none;
+  }
+}

@@ -1,0 +1,422 @@
+/* The forecast control bar: region, block, date, bulletin. */
+
+.controlbar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-3) var(--sp-5);
+  padding: 8px var(--sp-5) 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.control-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-2);
+  line-height: 16px;
+}
+
+.control-label-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.control-hint {
+  font-size: var(--fs-2xs);
+  line-height: 16px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.control-hint.is-warn {
+  color: var(--act-caution);
+  font-weight: var(--fw-semibold);
+}
+
+.control-region {
+  width: 164px;
+}
+
+.control-block {
+  position: relative;
+  width: 260px;
+}
+
+.control-action {
+  margin-left: auto;
+}
+
+/* --- Block combobox --------------------------------------------------------- */
+.combo-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 10px 0 var(--sp-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+}
+
+.combo-trigger:hover:not(:disabled),
+.combo-trigger.is-open {
+  border-color: var(--gray-600);
+}
+
+.combo-value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.combo-name {
+  font-weight: var(--fw-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.combo-meta {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.combo-placeholder {
+  color: var(--text-2);
+}
+
+.combo-chevron {
+  flex: none;
+  color: var(--text-2);
+}
+
+.combo-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.combo-search {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-3);
+}
+
+.combo-search input {
+  flex: 1;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  font-size: var(--fs-md);
+  color: var(--text);
+  outline: none;
+}
+
+.combo-search:focus-within {
+  box-shadow: inset 0 -2px 0 var(--focus-color);
+}
+
+.combo-list {
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 0 6px;
+  list-style: none;
+}
+
+.combo-list ul {
+  list-style: none;
+}
+
+.combo-group {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px var(--sp-3) 4px;
+  background: var(--surface);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.combo-group-count {
+  font-weight: var(--fw-medium);
+}
+
+.combo-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0 6px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.combo-option.is-active {
+  background: var(--gray-100);
+}
+
+.combo-option.is-selected {
+  color: var(--brand-800);
+  font-weight: var(--fw-semibold);
+}
+
+.combo-option-name {
+  flex: 1;
+}
+
+.combo-option-count {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  font-weight: var(--fw-regular);
+}
+
+.combo-check {
+  color: var(--brand-700);
+}
+
+.combo-empty {
+  padding: var(--sp-4);
+  color: var(--text-2);
+}
+
+/* --- Date ------------------------------------------------------------------- */
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.date-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  height: var(--control-h);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.date-stepper .icon-btn {
+  width: 34px;
+  height: 100%;
+  border-radius: 0;
+}
+
+.date-input {
+  width: 148px;
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  background: transparent;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.date-input:focus-visible {
+  outline-offset: -2px;
+}
+
+.date-input.is-warn {
+  background: var(--act-caution-bg);
+}
+
+.date-chips {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.bulletin-btn {
+  white-space: nowrap;
+}
+
+.bulletin-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-2) var(--sp-5);
+  background: var(--accent-50);
+  border-bottom: 1px solid var(--accent-100);
+  color: var(--accent-700);
+  font-size: var(--fs-sm);
+  flex: none;
+}
+
+.bulletin-banner .link-btn {
+  color: var(--accent-700);
+}
+
+/* Tablet widths: let the bar wrap tidily. */
+@media (max-width: 1180px) {
+  .date-chips .chip:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .control-action {
+    margin-left: 0;
+  }
+}
+
+/* --- Compact phone bar --------------------------------------------------------- */
+.controlbar.is-compact {
+  display: block;
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.compact-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.compact-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+}
+
+.compact-summary-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.compact-block {
+  font-weight: var(--fw-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--brand-700);
+}
+
+.compact-stepper {
+  height: 48px;
+}
+
+.compact-stepper .icon-btn {
+  width: 44px;
+}
+
+.compact-stepper .icon-btn + .icon-btn {
+  border-left: 1px solid var(--border);
+}
+
+.compact-panel {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0 var(--sp-2);
+}
+
+.compact-panel[hidden] {
+  display: none;
+}
+
+.compact-panel .control,
+.compact-panel .control-region,
+.compact-panel .control-block {
+  width: 100%;
+}
+
+.compact-panel .control-label-row {
+  flex-direction: column;
+  gap: 0;
+}
+
+.compact-panel .control-hint {
+  white-space: normal;
+}
+
+.compact-panel .date-row {
+  flex-wrap: wrap;
+}
+
+.compact-panel .date-stepper {
+  flex: 1;
+}
+
+.compact-panel .date-input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.compact-panel .date-chips .chip:last-child {
+  display: inline-flex;
+}
+
+.compact-panel .bulletin-btn {
+  width: 100%;
+}
+
+.compact-panel .combo-popup {
+  width: 100%;
+}

@@ -173,6 +173,26 @@ class RegionRuntime:
         h["index"] = {d: i for i, d in enumerate(h["dates"])}
         return h
 
+    @cached_property
+    def replay_windows(self) -> list[tuple[str, str]]:
+        """Contiguous date ranges with recorded block values, from the bundle.
+
+        Read from the data rather than configured, so the dashboard offers
+        exactly the dates the API can replay.
+        """
+        dates: set[str] = set()
+        for path in (self.root / "history").glob("*.json"):
+            dates.update(json.loads(path.read_text(encoding="utf-8"))["dates"])
+            break  # every block shares the same dates
+        ordered = sorted(Date.fromisoformat(d) for d in dates)
+        windows: list[tuple[str, str]] = []
+        for d in ordered:
+            if windows and (d - Date.fromisoformat(windows[-1][1])).days == 1:
+                windows[-1] = (windows[-1][0], d.isoformat())
+            else:
+                windows.append((d.isoformat(), d.isoformat()))
+        return windows
+
     # ------------------------------------------------------------------
     def list_blocks(self) -> list[BlockSummary]:
         out = [
