@@ -1,3 +1,4 @@
 # Build log
 
 - **2026-09-26** — Built the full panchayat downscaling system end to end: data layer (GADM blocks, datameet villages → 1,955 panchayat proxies, GHCN gauges), terrain features, two-stage LightGBM models with calibrated uncertainty, evaluation (T1/T2 + Karnataka transfer), FastAPI and the React/MapLibre dashboard. Evaluation: rain occurrence and temperature beat naive; rain amount not significant and does not transfer to KA. Docker packaging not built.
+- **2026-09-27** — Round 2 (FieldCast): keyless DEM terrain + rain-shadow features, whole-year seasons, ~100-gauge historical validation design, LGD gram-panchayat support, numpy-only serving runtime with committed bundle for Vercel, and a full dashboard redesign. Retrain/evaluation waits on the multi-day weather history fetch.
