@@ -1,0 +1,160 @@
+/**
+ * Design tokens.
+ *
+ * There is no design.md in this repo, so these are derived from the stated
+ * constraints rather than invented freely: high contrast for a projector in a
+ * bright room, no meaning carried by red/green alone, and text that stays
+ * legible at 4.5:1 or better against its own background.
+ *
+ * Advisory action colours are always paired with a glyph and a word, so a
+ * viewer with deuteranopia reads the shape and the label, not the hue.
+ */
+
+:root {
+  /* Surfaces */
+  --canvas: #eef1f5;
+  --surface: #ffffff;
+  --surface-sunken: #f5f7fa;
+  --surface-inverse: #10151b;
+
+  /* Ink — all pass 4.5:1 on --surface */
+  --ink: #10151b;
+  --ink-muted: #4a5560;
+  --ink-inverse: #ffffff;
+
+  /* Structure */
+  --line: #cdd5de;
+  --line-strong: #97a3b0;
+
+  /* Brand / interactive */
+  --accent: #0f4c8a;
+  --accent-strong: #0a3765;
+  --accent-wash: #e6eefa;
+
+  /* Advisory actions. Hue is never the only cue — see AdvisoryList. */
+  --action-proceed: #1a6b3c;
+  --action-proceed-wash: #e4f3ea;
+  --action-caution: #8a5300;
+  --action-caution-wash: #fdf1dd;
+  --action-avoid: #a01722;
+  --action-avoid-wash: #fce9ea;
+  --action-none: #4a5560;
+  --action-none-wash: #eef1f5;
+
+  /* Confidence. Neutral by design: confidence must not compete with the
+     choropleth's own colour scale. */
+  --support-high: #1a6b3c;
+  --support-medium: #8a5300;
+  --support-low: #6a2c8a;
+
+  /* Tier badges */
+  --tier-t1: #0f4c8a;
+  --tier-t2: #1a6b3c;
+  --tier-t3: #6a2c8a;
+
+  /* Typography — sized up a step from a typical dashboard, for projection. */
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    'Noto Sans Devanagari', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+
+  /* Spacing */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 1px 2px rgb(16 21 27 / 10%);
+  --shadow: 0 2px 10px rgb(16 21 27 / 12%);
+  --shadow-lg: 0 8px 28px rgb(16 21 27 / 18%);
+
+  --focus: 3px solid #b45c00;
+  --focus-offset: 2px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: 1.25;
+  font-weight: 650;
+}
+
+p {
+  margin: 0;
+}
+
+:where(a) {
+  color: var(--accent);
+}
+
+:where(button, a, input, select, summary, [tabindex]):focus-visible {
+  outline: var(--focus);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* Never remove focus rings; only ever replace them with a better one. */
+:where(button, a, input, select):focus:not(:focus-visible) {
+  outline: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
