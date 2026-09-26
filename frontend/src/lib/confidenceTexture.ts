@@ -28,7 +28,7 @@ import type { SupportLevel } from '../types/api'
 export type TextureId = 'none' | 'stipple-medium' | 'hatch-low'
 
 /** One constant fill opacity for every support level. Do not vary this. */
-export const FILL_OPACITY = 0.82
+export const FILL_OPACITY = 0.75
 
 export interface ConfidenceStyle {
   support: SupportLevel
@@ -52,8 +52,10 @@ const STYLES: Record<SupportLevel, ConfidenceStyle> = {
     support: 'high',
     texture: 'none',
     fillOpacity: FILL_OPACITY,
-    outlineColor: '#ffffff',
-    outlineWidth: 1.2,
+    // Dark hairline (drawn over a white casing on the map) so boundaries show
+    // even where a diverging fill sits near its white midpoint.
+    outlineColor: 'rgba(16, 21, 27, 0.72)',
+    outlineWidth: 1,
     outlineDash: null,
     shortLabel: 'Well supported',
     legendExplanation:
@@ -64,8 +66,8 @@ const STYLES: Record<SupportLevel, ConfidenceStyle> = {
     support: 'medium',
     texture: 'stipple-medium',
     fillOpacity: FILL_OPACITY,
-    outlineColor: '#ffffff',
-    outlineWidth: 1.4,
+    outlineColor: 'rgba(16, 21, 27, 0.72)',
+    outlineWidth: 1,
     outlineDash: null,
     shortLabel: 'Moderate support',
     legendExplanation:

@@ -474,35 +474,6 @@
   font-weight: 600;
 }
 
-/* Value labels are HTML markers (no keyed glyph server needed). */
-.map-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-  color: var(--label-ink, var(--ink));
-  text-align: center;
-  line-height: 1.15;
-  white-space: nowrap;
-}
-.map-label-name {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgb(255 255 255 / 88%);
-  color: var(--ink);
-}
-.map-label-value {
-  margin-top: 2px;
-  font-size: 13px;
-  font-weight: 800;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--surface-inverse);
-  color: var(--ink-inverse);
-}
-
 .maplibregl-ctrl-attrib {
   font-size: 11px;
 }
