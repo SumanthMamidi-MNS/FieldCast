@@ -24,7 +24,8 @@ from backend.app.schemas import (
 from backend.app.services import forecast as svc
 from backend.config import ARTIFACT_DIR, PRIMARY_REGION, REGIONS, REPORT_DIR
 from backend.pipeline.models.downscaler import MODEL_VERSION
-from backend.pipeline.sources.open_meteo import set_pacing
+from backend.pipeline.sources.cache import OfflineCacheMiss
+from backend.pipeline.sources.open_meteo import ApiBudgetExceeded, set_pacing
 
 # Interactive requests are small; pace them to the minutely limit, not the hourly
 # budget that long training runs need.
@@ -61,6 +62,14 @@ def _call(fn, *args, **kwargs):
         raise HTTPException(exc.status, str(exc)) from exc
     except FileNotFoundError as exc:
         raise HTTPException(503, f"required artifact missing: {exc}") from exc
+    except OfflineCacheMiss as exc:
+        raise HTTPException(
+            503,
+            "This block's data is not cached and the server is in offline mode. "
+            "Warm it with network access first: python -m backend.app.warm --block <id>",
+        ) from exc
+    except ApiBudgetExceeded as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @app.get("/api/health", response_model=HealthResponse)

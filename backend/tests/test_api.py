@@ -259,3 +259,15 @@ def test_health_endpoint():
     r = TestClient(main.app).get("/api/health")
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
+
+
+def test_offline_cache_miss_is_a_clear_503_not_a_crash(wired, monkeypatch):
+    from backend.pipeline.sources.cache import OfflineCacheMiss
+
+    def missing(region, block):
+        raise OfflineCacheMiss("k")
+
+    monkeypatch.setattr(svc, "panchayat_terrain", missing)
+    r = TestClient(main.app).get(f"/api/blocks/{BLOCK}/panchayats")
+    assert r.status_code == 503
+    assert "offline" in r.json()["detail"]
