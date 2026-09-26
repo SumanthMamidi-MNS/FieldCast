@@ -23,31 +23,17 @@ import numpy as np
 import pandas as pd
 
 from backend.app.schemas import Tier
-from backend.config import ARTIFACT_DIR, PROCESSED_DIR, QUANTILES, VARIABLES
-from backend.pipeline.features.build import FEATURE_COLUMNS, add_temporal_features
-from backend.pipeline.models.downscaler import (
-    VariableDownscaler,
-    lapse_rate_prior,
-    mixture_quantiles,
+from backend.config import ARTIFACT_DIR, PROCESSED_DIR, VARIABLES
+from backend.pipeline.models.downscaler import VariableDownscaler
+from backend.pipeline.models.finalize import finalize_variable
+from backend.pipeline.models.numerics import (
+    FEATURE_COLUMNS,
+    TERRAIN_COLUMNS,
+    target_feature_columns,
 )
-from backend.pipeline.models.reconcile import reconcile_quantiles, reconcile_two_stage
 from backend.pipeline.models.uncertainty import (
     SupportModel,
-    clamp_non_negative,
-    inflate_interval,
-    nearest_gauge_km,
-    support_score,
 )
-
-TERRAIN_FOR_SUPPORT = [
-    "elevation_m",
-    "slope_deg",
-    "monsoon_exposure",
-    "ruggedness_m",
-    "roughness_m",
-    "local_relief_m",
-    "distance_to_coast_km",
-]
 
 
 @dataclass
@@ -75,19 +61,26 @@ def build_target_features(
     block_values: pd.Series | np.ndarray,
     dates: pd.Series,
 ) -> pd.DataFrame:
-    """Feature rows for target points.
+    """Feature rows for target points, via the same numpy code the API uses.
 
     `targets` must carry block_id plus the terrain columns. `block_values` and
     `dates` align row-for-row with `targets`.
     """
     out = targets.reset_index(drop=True).copy()
-    out = out.join(stats, on="block_id")
-    out["block_value"] = np.asarray(block_values, dtype=float)
-    out["date"] = pd.to_datetime(pd.Series(dates).reset_index(drop=True))
-    out["elevation_anomaly_m"] = out["elevation_m"] - out["block_mean_elevation_m"]
-    out["exposure_anomaly"] = out["monsoon_exposure"] - out["block_mean_exposure"]
-    out["lapse_prior_c"] = lapse_rate_prior(out["elevation_anomaly_m"].to_numpy())
-    out = add_temporal_features(out)
+    joined = out.join(stats, on="block_id")
+    when = pd.to_datetime(pd.Series(dates).reset_index(drop=True))
+    cols = target_feature_columns(
+        {c: joined[c].to_numpy() for c in TERRAIN_COLUMNS},
+        joined["block_mean_elevation_m"].to_numpy(),
+        joined["block_elevation_spread_m"].to_numpy(),
+        joined["block_mean_exposure"].to_numpy(),
+        np.asarray(block_values, dtype=float),
+        when.dt.dayofyear.to_numpy(),
+        when.dt.month.to_numpy(),
+    )
+    for name, values in cols.items():
+        out[name] = values
+    out["date"] = when
     return out
 
 
@@ -165,59 +158,25 @@ class Predictor:
         evaluation leaves it off: a handful of gauges is not a block.
         """
         model = self.models[key]
-        var = VARIABLES[key]
         block_value = features["block_value"].to_numpy(dtype=float)
-
         x = features[FEATURE_COLUMNS]
-        w = np.ones(len(features)) if weights is None else np.asarray(weights, dtype=float)
         occurrence = model.predict_occurrence(x)
-        conditional = None
-        if occurrence is not None:
-            # Two-stage: reconcile expected rain (P x amount), then form the mixture.
-            conditional = model.predict_quantiles(x, block_value)
-            if reconcile_to is not None:
-                conditional = reconcile_two_stage(conditional, occurrence, w, float(reconcile_to))
-            quantiles = mixture_quantiles(conditional, occurrence)
-        else:
-            quantiles, _ = model.predict(x, block_value)
-            if reconcile_to is not None:
-                quantiles = reconcile_quantiles(quantiles, w, float(reconcile_to), var.reconcile)
+        quantiles = model.predict_quantiles(x, block_value)
 
-        lats = features["lat"].to_numpy(dtype=float)
-        lons = features["lon"].to_numpy(dtype=float)
-        if self.support is not None:
-            cols = self.support.columns
-            score = support_score(features[cols].to_numpy(dtype=float), self.support, lats, lons, tier)
-            gauge_km = nearest_gauge_km(lats, lons, self.support.gauge_coords)
-        else:
-            score = np.zeros(len(features))
-            gauge_km = np.full(len(features), np.inf)
-
-        lo_q, hi_q = min(QUANTILES), max(QUANTILES)
-        median = quantiles[0.5]
         calib = self.scale_calibration.get(key) if apply_scale_calibration else None
-        if calib is not None and tier is not Tier.T1:
-            # A measured point-scale factor replaces the fixed T3 guess: widen as
-            # at T2, then by the factor that restored 80% coverage at gauges.
-            lower, upper = inflate_interval(
-                quantiles[lo_q], median, quantiles[hi_q], score, Tier.T2
-            )
-            k = float(calib["factor"])
-            lower, upper = median - k * (median - lower), median + k * (upper - median)
-        else:
-            lower, upper = inflate_interval(
-                quantiles[lo_q], median, quantiles[hi_q], score, tier
-            )
-        if var.reconcile == "multiplicative":
-            lower, median, upper = clamp_non_negative(lower, median, upper)
-
-        return {
-            "median": median,
-            "lower": lower,
-            "upper": upper,
-            "raw_quantiles": quantiles,
-            "occurrence": occurrence,
-            "conditional": conditional,
-            "support_score": score,
-            "nearest_gauge_km": gauge_km,
-        }
+        support_features = (
+            features[self.support.columns].to_numpy(dtype=float) if self.support is not None else None
+        )
+        return finalize_variable(
+            quantiles=quantiles,
+            occurrence=occurrence,
+            reconcile_mode=VARIABLES[key].reconcile,
+            support_features=support_features,
+            support=self.support,
+            lats=features["lat"].to_numpy(dtype=float),
+            lons=features["lon"].to_numpy(dtype=float),
+            tier=tier,
+            weights=weights,
+            reconcile_to=reconcile_to,
+            scale_factor=float(calib["factor"]) if calib is not None else None,
+        )

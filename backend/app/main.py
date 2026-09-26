@@ -1,16 +1,23 @@
-"""FastAPI application.
+"""FieldCast API: the same app runs locally and on Vercel.
 
-Run:  uvicorn backend.app.main:app --reload --port 8000
+Local:   uvicorn backend.app.main:app --port 8000   (serves the API and, when
+         `frontend/dist` exists, the dashboard at /)
+Vercel:  found through `[tool.vercel] entrypoint` in pyproject.toml; the
+         dashboard mount is promoted to the CDN at build time.
+
+Reads only the committed serving bundle (`serve_bundle/`), so it needs numpy,
+httpx and FastAPI, not the training stack.
 """
 
 from __future__ import annotations
 
-import json
 import os
 from datetime import date as Date
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from backend.app.schemas import (
@@ -21,65 +28,54 @@ from backend.app.schemas import (
     PanchayatGeometry,
     Tier,
 )
-from backend.app.services import forecast as svc
-from backend.config import ARTIFACT_DIR, PRIMARY_REGION, REGIONS, REPORT_DIR
-from backend.pipeline.models.downscaler import MODEL_VERSION
-from backend.pipeline.sources.cache import OfflineCacheMiss
-from backend.pipeline.sources.open_meteo import ApiBudgetExceeded, set_pacing
-
-# Interactive requests are small; pace them to the minutely limit, not the hourly
-# budget that long training runs need.
-set_pacing("minutely")
+from backend.config import MODEL_VERSION, PRIMARY_REGION, REGIONS, ROOT
+from backend.serve import runtime as rt
 
 app = FastAPI(
-    title="Panchayat Weather Downscaling API",
+    title="FieldCast API",
     version=MODEL_VERSION,
     description=(
         "Downscales block-level weather forecasts to panchayat level for agro-met advisories. "
         "Every value carries a predictive interval, a validation tier, and a support label."
     ),
 )
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(","),
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
+
+_cors = os.environ.get("CORS_ORIGINS")
+if _cors:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors.split(","),
+        allow_methods=["GET", "POST"],
+        allow_headers=["*"],
+    )
 
 
-def _region(region: str) -> str:
+def _runtime(region: str) -> rt.RegionRuntime:
     if region not in REGIONS:
         raise HTTPException(404, f"unknown region {region!r}; available: {sorted(REGIONS)}")
-    if not (ARTIFACT_DIR / region).exists() and not (ARTIFACT_DIR / PRIMARY_REGION).exists():
-        raise HTTPException(503, "models are not trained yet")
-    return region
+    if region not in rt.served_regions():
+        raise HTTPException(
+            503, f"{REGIONS[region].state_name} is not served yet: no trained model bundle."
+        )
+    return rt.get_runtime(region)
 
 
 def _call(fn, *args, **kwargs):
     try:
         return fn(*args, **kwargs)
-    except svc.ForecastError as exc:
+    except rt.ForecastError as exc:
         raise HTTPException(exc.status, str(exc)) from exc
-    except FileNotFoundError as exc:
-        raise HTTPException(503, f"required artifact missing: {exc}") from exc
-    except OfflineCacheMiss as exc:
-        raise HTTPException(
-            503,
-            "This block's data is not cached and the server is in offline mode. "
-            "Warm it with network access first: python -m backend.app.warm --block <id>",
-        ) from exc
-    except ApiBudgetExceeded as exc:
-        raise HTTPException(503, str(exc)) from exc
 
 
+# --------------------------------------------------------------------------
 @app.get("/api/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    trained = [r for r in REGIONS if (ARTIFACT_DIR / r / "summary.json").exists()]
+    served = rt.served_regions()
     return HealthResponse(
         status="ok",
-        model_loaded=bool(trained),
-        model_version=MODEL_VERSION if trained else None,
-        regions_available=trained,
+        model_loaded=bool(served),
+        model_version=MODEL_VERSION if served else None,
+        regions_available=served,
         offline_mode=os.environ.get("DOWNSCALE_OFFLINE") == "1",
     )
 
@@ -93,38 +89,21 @@ class RegionInfo(BaseModel):
 
 @app.get("/api/regions", response_model=list[RegionInfo])
 def regions() -> list[RegionInfo]:
+    served = set(rt.served_regions())
     return [
-        RegionInfo(
-            key=r.key,
-            state=r.state_name,
-            districts=list(r.districts),
-            served=(ARTIFACT_DIR / r.key / "summary.json").exists(),
-        )
+        RegionInfo(key=r.key, state=r.state_name, districts=list(r.districts), served=r.key in served)
         for r in REGIONS.values()
     ]
 
 
-@app.get("/api/evaluation/reports")
-def evaluation_reports() -> dict:
-    """Every committed evaluation report, keyed by file stem, for the Evidence page.
-
-    Includes transfer runs (models from one region scored on another), which the
-    per-region table endpoint does not cover.
-    """
-    out = {}
-    for path in sorted(REPORT_DIR.glob("evaluation_*.json")):
-        out[path.stem] = json.loads(path.read_text(encoding="utf-8"))
-    return out
-
-
 @app.get("/api/blocks", response_model=list[BlockSummary])
 def blocks(region: str = Query(PRIMARY_REGION)) -> list[BlockSummary]:
-    return _call(svc.list_blocks, _region(region))
+    return _call(_runtime(region).list_blocks)
 
 
 @app.get("/api/blocks/{block_id}/panchayats", response_model=list[PanchayatGeometry])
 def panchayats(block_id: str, region: str = Query(PRIMARY_REGION)) -> list[PanchayatGeometry]:
-    return _call(svc.panchayat_geometries, _region(region), block_id)
+    return _call(_runtime(region).panchayat_geometries, block_id)
 
 
 @app.get("/api/blocks/{block_id}/forecast", response_model=BlockForecastResponse)
@@ -133,7 +112,7 @@ def forecast(
     date: Date = Query(..., description="YYYY-MM-DD"),
     region: str = Query(PRIMARY_REGION),
 ) -> BlockForecastResponse:
-    return _call(svc.block_forecast, _region(region), block_id, date)
+    return _call(_runtime(region).forecast, block_id, date)
 
 
 class BlockInput(BaseModel):
@@ -151,16 +130,15 @@ def forecast_from_input(
 ) -> BlockForecastResponse:
     if not body.block_values:
         raise HTTPException(422, "block_values must not be empty")
-    return _call(svc.block_forecast, _region(region), block_id, body.date, body.block_values)
+    return _call(_runtime(region).forecast, block_id, body.date, body.block_values)
 
 
 @app.get("/api/evaluation", response_model=list[BaselineComparison])
 def evaluation(region: str = Query(PRIMARY_REGION)) -> list[BaselineComparison]:
-    """Model-vs-naive skill from the committed evaluation report."""
-    path = REPORT_DIR / f"evaluation_{region}.json"
-    if not path.exists():
-        raise HTTPException(404, f"no evaluation report for {region!r}; run the evaluation first")
-    report = json.loads(path.read_text(encoding="utf-8"))
+    """Model-vs-naive skill for one region, from its committed evaluation report."""
+    report = rt.evaluation_reports().get(f"evaluation_{region}")
+    if report is None:
+        raise HTTPException(404, f"no evaluation report for {region!r}")
     out = []
     for tier in ("T1", "T2", "T2_hist"):
         for r in report.get(tier, {}).values():
@@ -179,3 +157,16 @@ def evaluation(region: str = Query(PRIMARY_REGION)) -> list[BaselineComparison]:
                 )
             )
     return out
+
+
+@app.get("/api/evaluation/reports")
+def evaluation_reports() -> dict:
+    """Every committed evaluation report, keyed by file stem, for the Evidence page."""
+    return rt.evaluation_reports()
+
+
+# --------------------------------------------------------------------------
+# Dashboard. Mounted last so every /api route above takes priority.
+_DIST = Path(os.environ.get("FIELDCAST_FRONTEND", str(ROOT / "frontend" / "dist")))
+if _DIST.is_dir():
+    app.mount("/", StaticFiles(directory=_DIST, html=True), name="dashboard")

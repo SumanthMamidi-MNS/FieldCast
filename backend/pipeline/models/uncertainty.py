@@ -23,11 +23,10 @@ Support combines three signals:
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.spatial.distance import cdist
-from scipy.stats import chi2
 
 from backend.app.schemas import SupportLevel, Tier
 from backend.config import SUPPORT_LABELS, T3_INTERVAL_INFLATION
@@ -42,6 +41,51 @@ _MAX_GAUGE_KM = 50.0
 # region was observable at all.
 _W_COVARIATE = 0.6
 _W_GAUGE = 0.4
+
+def _gammaincc(a: float, x: float) -> float:
+    """Regularised upper incomplete gamma Q(a, x), numpy/stdlib only.
+
+    Series for x < a + 1, Lentz continued fraction otherwise (Numerical Recipes
+    6.2). Written out so the serving path needs no SciPy; a test pins it to
+    scipy.special.gammaincc.
+    """
+    if x <= 0.0:
+        return 1.0
+    gln = math.lgamma(a)
+    if x < a + 1.0:
+        term = total = 1.0 / a
+        ap = a
+        for _ in range(500):
+            ap += 1.0
+            term *= x / ap
+            total += term
+            if abs(term) < abs(total) * 1e-15:
+                break
+        return max(0.0, 1.0 - total * math.exp(-x + a * math.log(x) - gln))
+    b = x + 1.0 - a
+    c = 1.0 / 1e-300
+    d = 1.0 / b
+    h = d
+    for i in range(1, 500):
+        an = -i * (i - a)
+        b += 2.0
+        d = an * d + b
+        d = 1e-300 if abs(d) < 1e-300 else d
+        c = b + an / c
+        c = 1e-300 if abs(c) < 1e-300 else c
+        d = 1.0 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1.0) < 1e-15:
+            break
+    return math.exp(-x + a * math.log(x) - gln) * h
+
+
+def chi2_sf(x: np.ndarray, df: int) -> np.ndarray:
+    """Chi-square survival function P(X > x) for `df` degrees of freedom."""
+    x = np.asarray(x, dtype=float)
+    return np.vectorize(lambda v: _gammaincc(df / 2.0, v / 2.0), otypes=[float])(x)
+
 
 _TIER_PENALTY = {Tier.T1: 0.0, Tier.T2: 0.05, Tier.T3: 0.10}
 
@@ -125,7 +169,7 @@ def nearest_gauge_km(
     pts = np.column_stack([lats, lons * scale_lon])
     gauges = np.column_stack([gauge_coords[:, 0], gauge_coords[:, 1] * scale_lon])
 
-    d_deg = cdist(pts, gauges).min(axis=1)
+    d_deg = np.sqrt(((pts[:, None, :] - gauges[None, :, :]) ** 2).sum(axis=2)).min(axis=1)
     return d_deg * 111.32
 
 
@@ -142,7 +186,7 @@ def covariate_support(maha: np.ndarray, n_dims: int) -> np.ndarray:
     maha = np.asarray(maha, dtype=float)
     out = np.zeros_like(maha)
     finite = np.isfinite(maha)
-    out[finite] = np.clip(2.0 * chi2.sf(maha[finite] ** 2, df=max(n_dims, 1)), 0.0, 1.0)
+    out[finite] = np.clip(2.0 * chi2_sf(maha[finite] ** 2, max(n_dims, 1)), 0.0, 1.0)
     return out
 
 

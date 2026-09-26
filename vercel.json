@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd frontend && npm ci && npm run build",
+  "functions": {
+    "backend/app/main.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{frontend/node_modules/**,frontend/src/**,frontend/public/**,backend/tests/**,docs/**,reports/**,data/**,models/**}"
+    }
+  },
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
+  ]
+}

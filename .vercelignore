@@ -1,0 +1,10 @@
+# Pipeline working data and artefacts: the deployed API reads only serve_bundle/.
+.venv/
+data/
+models/
+reports/*.log
+frontend/node_modules/
+frontend/dist/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/

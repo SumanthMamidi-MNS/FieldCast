@@ -33,14 +33,18 @@ import pandas as pd
 from sklearn.isotonic import IsotonicRegression
 
 from backend.config import (
-    LAPSE_RATE_C_PER_M,
+    MODEL_VERSION,
     QUANTILES,
     VARIABLES,
     WET_DAY_THRESHOLD_MM,
     Variable,
 )
-
-MODEL_VERSION = "0.1.0"
+from backend.pipeline.models.numerics import (
+    invert_target,
+    lapse_rate_prior,
+    mixture_quantiles,
+    sort_quantiles,
+)
 
 # Deliberately conservative trees. The training signal is a small local anomaly
 # on top of a strong block-level baseline; a deep model will happily memorise
@@ -102,10 +106,7 @@ class VariableDownscaler:
 
     def invert_target(self, anomaly: np.ndarray, block: np.ndarray) -> np.ndarray:
         """Back to the variable's natural units."""
-        if self.variable.reconcile == "multiplicative":
-            out = np.expm1(np.log1p(np.maximum(block, 0.0)) + anomaly)
-            return np.maximum(out, 0.0)
-        return block + anomaly
+        return invert_target(anomaly, block, self.variable.reconcile)
 
     # ------------------------------------------------------------------
     # Fit
@@ -234,9 +235,7 @@ class VariableDownscaler:
             out[q] = self.invert_target(anomaly, block_value)
 
         # Quantile regressors are fitted independently and can cross.
-        levels = sorted(out)
-        stacked = np.sort(np.vstack([out[q] for q in levels]), axis=0)
-        return {q: stacked[i] for i, q in enumerate(levels)}
+        return sort_quantiles(out)
 
     def predict_occurrence(self, features: pd.DataFrame) -> np.ndarray | None:
         """Calibrated P(measurable rain). None for non-precipitation variables."""
@@ -340,24 +339,4 @@ class VariableDownscaler:
         )
 
 
-def mixture_quantiles(
-    conditional: dict[float, np.ndarray], occurrence: np.ndarray
-) -> dict[float, np.ndarray]:
-    """Quantiles of the dry/wet mixture from conditional (if-wet) quantiles.
-
-    Below the dry probability the mixture quantile is zero. This reuses the
-    fitted conditional levels rather than re-deriving (q - dry) / wet levels,
-    which three fitted quantiles cannot supply; it is an approximation.
-    """
-    dry_prob = 1.0 - np.asarray(occurrence, dtype=float)
-    return {q: np.where(q <= dry_prob, 0.0, v) for q, v in conditional.items()}
-
-
-def lapse_rate_prior(elevation_anomaly_m: np.ndarray) -> np.ndarray:
-    """Expected temperature offset from elevation alone.
-
-    Given to the temperature models as a feature so they learn the *departure*
-    from known physics (cold-air drainage, slope aspect heating) rather than
-    spending capacity rediscovering the lapse rate from data.
-    """
-    return np.asarray(elevation_anomaly_m, dtype=float) * LAPSE_RATE_C_PER_M
+__all__ = ["MODEL_VERSION", "TrainingResult", "VariableDownscaler", "lapse_rate_prior", "mixture_quantiles"]

@@ -6,6 +6,7 @@ not editing pipeline code. That is what makes the Karnataka transfer test cheap.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,9 +22,17 @@ INTERIM_DIR = DATA_DIR / "interim"
 PROCESSED_DIR = DATA_DIR / "processed"
 ARTIFACT_DIR = ROOT / "models" / "artifacts"
 REPORT_DIR = ROOT / "reports"
+# Bumped whenever the model or its features change; stamped into every bundle.
+MODEL_VERSION = "0.2.0"
 
+# Precomputed serving bundle: the only data the deployed API reads.
+SERVE_DIR = ROOT / "serve_bundle"
+
+# Pipeline working directories. Creation is best-effort: on a serverless host the
+# filesystem is read-only and the API never touches these.
 for _d in (CACHE_DIR, RAW_DIR, INTERIM_DIR, PROCESSED_DIR, ARTIFACT_DIR, REPORT_DIR):
-    _d.mkdir(parents=True, exist_ok=True)
+    with contextlib.suppress(OSError):
+        _d.mkdir(parents=True, exist_ok=True)
 
 
 # --------------------------------------------------------------------------

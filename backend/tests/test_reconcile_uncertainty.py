@@ -369,3 +369,14 @@ def test_two_stage_reconciliation_leaves_a_dry_forecast_alone():
     cond = {0.1: np.zeros(3), 0.5: np.zeros(3), 0.9: np.zeros(3)}
     out = reconcile_two_stage(cond, np.array([0.1, 0.2, 0.1]), np.ones(3), block_value=5.0)
     assert all(np.allclose(v, 0.0) for v in out.values())
+
+
+def test_numpy_chi2_survival_matches_scipy():
+    """The serving path avoids SciPy; its chi-square tail must equal SciPy's."""
+    from scipy.stats import chi2
+
+    from backend.pipeline.models.uncertainty import chi2_sf
+
+    xs = np.array([0.0, 0.3, 2.0, 7.5, 10.0, 18.3, 40.0, 120.0])
+    for df in (1, 3, 7, 10, 13):
+        assert np.allclose(chi2_sf(xs, df), chi2.sf(xs, df), rtol=1e-9, atol=1e-14)

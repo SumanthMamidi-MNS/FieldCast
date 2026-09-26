@@ -43,37 +43,16 @@ from backend.config import (
     VARIABLES,
     Region,
 )
-from backend.pipeline.models.downscaler import lapse_rate_prior
+from backend.pipeline.models.numerics import (
+    CONTEXT_COLUMNS,
+    FEATURE_COLUMNS,
+    TERRAIN_COLUMNS,
+    lapse_rate_prior,
+    temporal_features,
+)
 
-# Terrain covariates attached to every location.
-TERRAIN_COLUMNS = [
-    "elevation_m",
-    "slope_deg",
-    "monsoon_exposure",
-    "ruggedness_m",
-    "roughness_m",
-    "local_relief_m",
-    "distance_to_coast_km",
-    "upwind_barrier_m",
-    "downwind_rise_m",
-    "upwind_max_elev_m",
-]
-
-# Features derived per (location, day) relative to its block.
-CONTEXT_COLUMNS = [
-    "block_value",
-    "elevation_anomaly_m",
-    "block_mean_elevation_m",
-    "block_elevation_spread_m",
-    "exposure_anomaly",
-    "block_mean_exposure",
-    "lapse_prior_c",
-    "doy_sin",
-    "doy_cos",
-    "is_monsoon",
-]
-
-FEATURE_COLUMNS = TERRAIN_COLUMNS + CONTEXT_COLUMNS
+# Column lists live in numerics so the deployed API shares them exactly.
+__all__ = ["CONTEXT_COLUMNS", "FEATURE_COLUMNS", "TERRAIN_COLUMNS"]
 
 
 def era5_grid_points(
@@ -110,13 +89,11 @@ def add_temporal_features(df: pd.DataFrame, date_col: str = "date") -> pd.DataFr
     1 January, which a tree split on an integer day cannot express.
     """
     out = df.copy()
-    doy = pd.to_datetime(out[date_col]).dt.dayofyear.to_numpy()
-    out["doy_sin"] = np.sin(2 * np.pi * doy / 365.25)
-    out["doy_cos"] = np.cos(2 * np.pi * doy / 365.25)
-    # SW monsoon: June to September. The terrain-rainfall relationship is a
-    # different physical regime in and out of monsoon, and the model needs to know.
-    month = pd.to_datetime(out[date_col]).dt.month.to_numpy()
-    out["is_monsoon"] = ((month >= 6) & (month <= 9)).astype(int)
+    dates = pd.to_datetime(out[date_col])
+    for name, values in temporal_features(
+        dates.dt.dayofyear.to_numpy(), dates.dt.month.to_numpy()
+    ).items():
+        out[name] = values
     return out
 
 
