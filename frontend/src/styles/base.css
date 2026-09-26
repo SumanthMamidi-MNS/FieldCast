@@ -587,3 +587,19 @@ code {
 .print-only {
   display: none;
 }
+
+/* Quiet marker for approximate units (village clusters). */
+.unit-tag {
+  display: inline-block;
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+  vertical-align: 0.15em;
+  white-space: nowrap;
+}

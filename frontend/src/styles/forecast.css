@@ -233,6 +233,26 @@
   color: var(--text-3);
 }
 
+/* Where a sequential scale starts. The fitted case is flagged, because pale no longer means dry. */
+.legend-fit {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+.legend-fit strong {
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.legend-fit.is-fitted {
+  padding: var(--sp-1) var(--sp-2);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--primary-soft);
+}
+
 .legend-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -1,4 +1,4 @@
-import { formatLongDate, PAST_SEASON_EXAMPLE } from '../../lib/dates'
+import { describeLive, describeReplay, formatLongDate, formatMediumDate, type DateCalendar } from '../../lib/dates'
 import { Icon } from '../common/Icon'
 import { Skeleton, SkeletonText } from '../common/Skeleton'
 import { StatusCard } from '../common/StatusCard'
@@ -48,10 +48,20 @@ export function EmptyCard({
   )
 }
 
+function availabilityText(calendar: DateCalendar): string {
+  const replay = describeReplay(calendar.replay)
+  const live = `live forecasts from ${describeLive(calendar)}`
+  return replay
+    ? `Forecasts exist for recorded past seasons (${replay}) and ${live}.`
+    : `This region has no recorded past seasons yet; there are ${live}.`
+}
+
 export function ErrorCard({
   status,
   message,
   date,
+  calendar,
+  exampleDate,
   onRetry,
   onExampleDate,
   onToday,
@@ -59,8 +69,10 @@ export function ErrorCard({
   status: number | null
   message: string
   date: string
+  calendar: DateCalendar
+  exampleDate: string | null
   onRetry: () => void
-  onExampleDate: () => void
+  onExampleDate: (date: string) => void
   onToday: () => void
 }) {
   const dateProblem = status === 422
@@ -79,9 +91,9 @@ export function ErrorCard({
       actions={
         dateProblem ? (
           <>
-            {date !== PAST_SEASON_EXAMPLE && (
-              <button type="button" className="btn btn-primary" onClick={onExampleDate}>
-                Go to 20 Jul 2023
+            {exampleDate && date !== exampleDate && (
+              <button type="button" className="btn btn-primary" onClick={() => onExampleDate(exampleDate)}>
+                Go to {formatMediumDate(exampleDate)}
               </button>
             )}
             <button type="button" className="btn btn-secondary" onClick={onToday}>
@@ -97,7 +109,7 @@ export function ErrorCard({
     >
       <p className="status-detail">{text}</p>
       {dateProblem && (
-        <p>Forecasts exist for past monsoons (June to September 2022 and 2023) and from yesterday to 15 days ahead.</p>
+        <p>{availabilityText(calendar)}</p>
       )}
     </StatusCard>
   )

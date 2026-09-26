@@ -3,6 +3,7 @@ import { confidenceStyle } from '../../lib/confidenceTexture'
 import { Icon } from '../common/Icon'
 import { TIER_NAME } from '../../lib/tiers'
 import { TierBadge } from '../common/TierBadge'
+import { formatDistanceKm, formatSupportScore } from '../../lib/format'
 import { SupportChip } from '../common/TextureSwatch'
 
 /** Gauge proximity stops counting towards support at this distance (architecture §3). */
@@ -10,11 +11,11 @@ const GAUGE_REACH_KM = 50
 
 function gaugeSentence(km: number | null): string {
   if (km === null) return 'No rain gauge is close enough to check this village directly.'
-  const d = km < 10 ? km.toFixed(1) : Math.round(km).toString()
+  const d = formatDistanceKm(km)
   if (km > GAUGE_REACH_KM) {
-    return `The nearest real rain gauge is ${d} km away, too far to check this village directly.`
+    return `The nearest real rain gauge is ${d} away, too far to check this village directly.`
   }
-  return `A real rain gauge ${d} km away helps anchor this estimate.`
+  return `A real rain gauge ${d} away helps anchor this estimate.`
 }
 
 /**
@@ -46,7 +47,7 @@ export function ConfidencePanel({
           <Icon name="mountain" size={16} />
           <span>
             Support score{' '}
-            <strong className="num">{Math.round(confidence.support_score * 100)} / 100</strong>, from
+            <strong className="num">{formatSupportScore(confidence.support_score)}</strong>, from
             how closely this village&rsquo;s terrain matches places the model learned from and how
             near a gauge is.
           </span>

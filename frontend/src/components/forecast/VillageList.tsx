@@ -2,9 +2,11 @@ import { useId, useMemo, useState } from 'react'
 import type { PanchayatForecast } from '../../types/api'
 import type { ColorScale } from '../../lib/colorScale'
 import { SORT_LABELS, searchVillages, sortVillages, type VillageSort } from '../../lib/villageList'
-import { formatDelta, formatValue, variableMeta, type VariableKey } from '../../lib/variables'
+import { deltaClass, formatDelta, formatValue } from '../../lib/format'
+import { variableMeta, type VariableKey } from '../../lib/variables'
 import { Icon } from '../common/Icon'
 import { SupportChip, TextureSwatch } from '../common/TextureSwatch'
+import { UnitTag } from '../common/UnitTag'
 
 interface VillageListProps {
   villages: PanchayatForecast[]
@@ -79,7 +81,6 @@ export function VillageList({ villages, variableKey, scale, selectedId, onSelect
           {rows.map((v) => {
             const variable = v.variables[variableKey]
             const value = variable?.value ?? Number.NaN
-            const delta = variable ? variable.value - variable.block_value : Number.NaN
             const selected = v.panchayat_id === selectedId
             return (
               <li key={v.panchayat_id}>
@@ -95,7 +96,10 @@ export function VillageList({ villages, variableKey, scale, selectedId, onSelect
                     <span className="swatch-empty" aria-hidden />
                   )}
                   <span className="village-row-main">
-                    <span className="village-row-name">{v.panchayat_name}</span>
+                    <span className="village-row-title">
+                      <span className="village-row-name">{v.panchayat_name}</span>
+                      <UnitTag unitType={v.unit_type} />
+                    </span>
                     {variable && <SupportChip support={variable.confidence.support} compact />}
                   </span>
                   <span className="village-row-nums">
@@ -104,9 +108,9 @@ export function VillageList({ villages, variableKey, scale, selectedId, onSelect
                     </span>
                     {variable && (
                       <span
-                        className={`delta num${delta > 0 ? ' is-up' : delta < 0 ? ' is-down' : ''}`}
+                        className={`delta num${deltaClass(variable.value, variable.block_value, variableKey)}`}
                       >
-                        {formatDelta(delta, variableKey, variable.unit)}
+                        {formatDelta(variable.value, variable.block_value, variableKey, variable.unit)}
                         <span className="visually-hidden"> compared with the block forecast</span>
                       </span>
                     )}

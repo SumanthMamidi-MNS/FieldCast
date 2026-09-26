@@ -1,8 +1,10 @@
 import { forwardRef } from 'react'
 import type { PanchayatForecast } from '../../types/api'
 import type { ColorScale } from '../../lib/colorScale'
-import { formatDelta, formatValue, type VariableKey } from '../../lib/variables'
+import { deltaClass, formatDelta, formatPercent, formatValue } from '../../lib/format'
+import type { VariableKey } from '../../lib/variables'
 import { SupportChip } from '../common/TextureSwatch'
+import { UnitTag } from '../common/UnitTag'
 
 interface MapTooltipProps {
   forecast: PanchayatForecast | null
@@ -25,18 +27,20 @@ export const MapTooltip = forwardRef<HTMLDivElement, MapTooltipProps>(function M
     <div ref={ref} className={`map-tooltip${forecast ? ' is-on' : ''}`} aria-hidden>
       {forecast && (
         <>
-          <p className="map-tooltip-name">{forecast.panchayat_name}</p>
+          <p className="map-tooltip-name">
+            {forecast.panchayat_name} <UnitTag unitType={forecast.unit_type} />
+          </p>
           {v ? (
             <>
               <p className="map-tooltip-value">
                 <span className="swatch-dot" style={{ background: scale.color(v.value) }} />
                 <strong className="num">{formatValue(v.value, variableKey, v.unit)}</strong>
-                <span className={`delta num${v.anomaly > 0 ? ' is-up' : v.anomaly < 0 ? ' is-down' : ''}`}>
-                  {formatDelta(v.value - v.block_value, variableKey, v.unit)} vs block
+                <span className={`delta num${deltaClass(v.value, v.block_value, variableKey)}`}>
+                  {formatDelta(v.value, v.block_value, variableKey, v.unit)} vs block
                 </span>
               </p>
               {v.rain_probability !== null && (
-                <p className="map-tooltip-sub num">{Math.round(v.rain_probability * 100)}% chance of rain</p>
+                <p className="map-tooltip-sub num">{formatPercent(v.rain_probability)} chance of rain</p>
               )}
               <SupportChip support={v.confidence.support} label={v.confidence.support_label} />
             </>

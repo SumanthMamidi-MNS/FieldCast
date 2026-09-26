@@ -1,6 +1,7 @@
 import type { VariableForecast } from '../../types/api'
 import { computeBand, refinementSignal } from '../../lib/intervalBand'
-import { formatDelta, formatNumber, variableMeta } from '../../lib/variables'
+import { deltaClass, formatDelta, formatNumber, percentOf } from '../../lib/format'
+import { variableMeta } from '../../lib/variables'
 
 /** Virtual drawing width; positions are consumed as percentages. */
 const VIRTUAL_WIDTH = 1000
@@ -25,7 +26,6 @@ export function VariableCard({ forecast }: { forecast: VariableForecast }) {
     width: VIRTUAL_WIDTH,
     ...(meta.zeroAnchored ? { floor: 0 } : {}),
   })
-  const delta = forecast.value - forecast.block_value
   const signal = refinementSignal({
     value: forecast.value,
     blockValue: forecast.block_value,
@@ -34,7 +34,7 @@ export function VariableCard({ forecast }: { forecast: VariableForecast }) {
   })
   const n = (v: number) => formatNumber(v, key)
   const p = forecast.rain_probability
-  const pct = p === null ? null : Math.round(p * 100)
+  const pct = p === null ? null : percentOf(p)
 
   const summary =
     `${forecast.label}: ${n(forecast.value)} ${unit}, likely between ${n(c.lower)} and ${n(c.upper)} ${unit}. ` +
@@ -49,10 +49,10 @@ export function VariableCard({ forecast }: { forecast: VariableForecast }) {
           <span className="var-card-unit">{unit}</span>
         </p>
         <span
-          className={`delta num${delta > 0 ? ' is-up' : delta < 0 ? ' is-down' : ''}`}
+          className={`delta num${deltaClass(forecast.value, forecast.block_value, key)}`}
           title="Difference from the block forecast"
         >
-          {formatDelta(delta, key, unit)}
+          {formatDelta(forecast.value, forecast.block_value, key, unit)}
           <span className="visually-hidden"> compared with the block forecast</span>
         </span>
       </header>

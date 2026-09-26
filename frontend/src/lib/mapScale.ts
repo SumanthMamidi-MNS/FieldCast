@@ -36,6 +36,7 @@ export function blockScale(panchayats: PanchayatForecast[], key: VariableKey): B
   const domain = relativeDomain(valuesOf(panchayats, key), blockValueOf(panchayats, key), {
     diverging: isDiverging(meta.scale),
     minReach: meta.resolution,
+    ...(meta.dryBelow !== undefined ? { dryBelow: meta.dryBelow } : {}),
   })
   return { scale: buildScale(meta.scale, domain), domain }
 }

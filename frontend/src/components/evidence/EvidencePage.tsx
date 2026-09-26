@@ -15,6 +15,7 @@ import { Icon } from '../common/Icon'
 import { Skeleton, SkeletonText } from '../common/Skeleton'
 import { StatusCard } from '../common/StatusCard'
 import { SkillChart } from './SkillChart'
+import { fixed, formatPercent } from '../../lib/format'
 
 type Axis = { min: number; max: number }
 
@@ -30,10 +31,10 @@ function OccurrenceNote({ row, where }: { row: EvaluationRow | undefined; where:
         <p className="occurrence-title">Rain or no rain, {where}</p>
         <p className="occurrence-text">
           {good
-            ? `The village-level call on whether it rains (2.5 mm or more) makes ${Math.round(gain * 100)}% less error than using the block forecast's call. This is what drives spraying and harvest advice.`
-            : `The village-level call on whether it rains is ${Math.round(-gain * 100)}% worse than the block forecast's call.`}{' '}
+            ? `The village-level call on whether it rains (2.5 mm or more) makes ${formatPercent(gain)} less error than using the block forecast's call. This is what drives spraying and harvest advice.`
+            : `The village-level call on whether it rains is ${formatPercent(-gain)} worse than the block forecast's call.`}{' '}
           <span className="muted num">
-            Brier score {row.occurrence.brier.toFixed(3)} vs {row.occurrence.brier_naive_block.toFixed(3)} for the
+            Brier score {fixed(row.occurrence.brier, 3)} vs {fixed(row.occurrence.brier_naive_block, 3)} for the
             block value; lower is better.
           </span>
         </p>

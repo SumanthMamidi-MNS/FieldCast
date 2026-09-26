@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { PanchayatForecast } from '../../types/api'
 import { formatLongDate } from '../../lib/dates'
+import { formatArea, formatElevation } from '../../lib/format'
 import { VARIABLE_ORDER } from '../../lib/variables'
 import { Logo } from '../brand/Logo'
 import { Icon } from '../common/Icon'
@@ -74,11 +75,11 @@ export function VillageDetail({ village, district, sourceLabel, onBack }: Villag
           <span className="dot-sep" aria-hidden>
             ·
           </span>
-          {Math.round(village.elevation_m)} m elevation
+          {formatElevation(village.elevation_m)} elevation
           <span className="dot-sep" aria-hidden>
             ·
           </span>
-          {village.area_km2} km²
+          {formatArea(village.area_km2)}
         </p>
       </header>
 

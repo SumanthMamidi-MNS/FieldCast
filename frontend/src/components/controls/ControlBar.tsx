@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import type { BlockSummary, RegionInfo } from '../../types/api'
-import { formatLongDate, stepDate } from '../../lib/dates'
+import { formatLongDate, stepDate, type DateCalendar } from '../../lib/dates'
 import { Icon } from '../common/Icon'
 import { BlockCombobox } from './BlockCombobox'
 import { DateControl } from './DateControl'
@@ -17,6 +17,7 @@ export interface ControlBarProps {
   onBlock: (id: string) => void
   date: string
   today: string
+  calendar: DateCalendar
   onDate: (date: string) => void
   bulletinActive: boolean
   bulletinDisabled: boolean
@@ -70,7 +71,7 @@ export function ControlBar(props: ControlBarProps) {
         }}
         loading={props.blocksLoading}
       />
-      <DateControl value={props.date} today={props.today} onChange={props.onDate} />
+      <DateControl value={props.date} today={props.today} calendar={props.calendar} onChange={props.onDate} />
       <div className="control control-action">
         <BulletinButton
           active={props.bulletinActive}
@@ -89,8 +90,8 @@ export function ControlBar(props: ControlBarProps) {
     )
   }
 
-  const prev = stepDate(props.date, -1, props.today)
-  const next = stepDate(props.date, 1, props.today)
+  const prev = stepDate(props.date, -1, props.today, props.calendar)
+  const next = stepDate(props.date, 1, props.today, props.calendar)
 
   return (
     <div className="controlbar is-compact" role="region" aria-label="Forecast controls">
@@ -120,7 +121,7 @@ export function ControlBar(props: ControlBarProps) {
             className="icon-btn"
             disabled={!prev}
             onClick={() => prev && props.onDate(prev)}
-            aria-label="Previous day"
+            aria-label={prev ? `Previous day, ${formatLongDate(prev)}` : 'No earlier date available'}
           >
             <Icon name="chevron-left" size={18} />
           </button>
@@ -129,7 +130,7 @@ export function ControlBar(props: ControlBarProps) {
             className="icon-btn"
             disabled={!next}
             onClick={() => next && props.onDate(next)}
-            aria-label="Next day"
+            aria-label={next ? `Next day, ${formatLongDate(next)}` : 'No later date available'}
           >
             <Icon name="chevron-right" size={18} />
           </button>

@@ -8,7 +8,8 @@ import { FILL_OPACITY, confidenceStyle } from '../../lib/confidenceTexture'
 import { buildHatchPattern, buildStipplePattern } from '../../lib/mapPatterns'
 import { buildFocusLabel, buildValueLabel } from '../../lib/mapLabels'
 import { boundsOf, fitPadding, labelImageId, labelSortKey } from '../../lib/mapGeometry'
-import { formatValue, type VariableKey } from '../../lib/variables'
+import { formatValue } from '../../lib/format'
+import type { VariableKey } from '../../lib/variables'
 import { MapTooltip } from './MapTooltip'
 
 interface MapViewProps {

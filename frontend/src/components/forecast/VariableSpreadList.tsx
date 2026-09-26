@@ -1,6 +1,7 @@
 import type { VariableStats } from '../../lib/blockSummary'
 import type { BlockScale } from '../../lib/mapScale'
-import { formatNumber, variableMeta, type VariableKey } from '../../lib/variables'
+import { formatNumber } from '../../lib/format'
+import { variableMeta, type VariableKey } from '../../lib/variables'
 
 interface VariableSpreadListProps {
   stats: VariableStats[]

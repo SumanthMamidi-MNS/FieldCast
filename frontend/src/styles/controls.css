@@ -399,8 +399,9 @@
   flex-wrap: wrap;
 }
 
+/* Full row for the stepper so the date stays readable; the chips wrap below. */
 .compact-panel .date-stepper {
-  flex: 1;
+  flex: 1 1 100%;
 }
 
 .compact-panel .date-input {

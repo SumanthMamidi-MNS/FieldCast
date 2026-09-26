@@ -3,7 +3,7 @@ import { DEFAULT_DATE, DEFAULT_REGION, api } from '../../api/client'
 import { useAsync } from '../../hooks/useAsync'
 import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { MOBILE_QUERY, prefersReducedMotion, useMediaQuery } from '../../hooks/useMediaQuery'
-import { PAST_SEASON_EXAMPLE, dateKind, todayIso } from '../../lib/dates'
+import { calendarFromRegion, dateKind, pastSeasonExample, todayIso } from '../../lib/dates'
 import { blockScale, type BlockScale } from '../../lib/mapScale'
 import { VARIABLE_ORDER, VARIABLES, isVariableKey, type VariableKey } from '../../lib/variables'
 import { ControlBar } from '../controls/ControlBar'
@@ -37,6 +37,11 @@ export function ForecastPage({ active }: { active: boolean }) {
 
   // --- Data ------------------------------------------------------------------
   const regions = useAsync(() => api.getRegions(), [])
+  const calendar = useMemo(
+    () => calendarFromRegion(regions.data?.find((r) => r.key === region)),
+    [regions.data, region],
+  )
+  const exampleDate = pastSeasonExample(calendar)
   const blocks = useAsync(() => api.getBlocks(region), [region])
   const blockList = useMemo(() => blocks.data ?? [], [blocks.data])
   const block = blockList.find((b) => b.block_id === storedBlock) ?? null
@@ -98,7 +103,7 @@ export function ForecastPage({ active }: { active: boolean }) {
 
   const sourceLabel = bulletin
     ? 'Your bulletin'
-    : dateKind(date, today) === 'live'
+    : dateKind(date, today, calendar) === 'live'
       ? 'Live forecast'
       : 'Past-season replay'
 
@@ -152,8 +157,10 @@ export function ForecastPage({ active }: { active: boolean }) {
         status={errorStatus}
         message={error}
         date={date}
+        calendar={calendar}
+        exampleDate={exampleDate}
         onRetry={retry}
-        onExampleDate={() => setDate(PAST_SEASON_EXAMPLE)}
+        onExampleDate={(d) => setDate(d)}
         onToday={() => setDate(today)}
       />
     )
@@ -200,6 +207,7 @@ export function ForecastPage({ active }: { active: boolean }) {
         onBlock={setStoredBlock}
         date={date}
         today={today}
+        calendar={calendar}
         onDate={setDate}
         bulletinActive={bulletin !== null}
         bulletinDisabled={blockId === null}

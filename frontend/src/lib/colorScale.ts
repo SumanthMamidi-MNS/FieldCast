@@ -225,7 +225,12 @@ export function niceDomain(
  * zero-anchored range is wrong: wind of 30.8-32.8 km/h on a 0-35 scale is one
  * flat colour. Instead:
  *
- * - **sequential** (rain): 0 -> the block's own maximum (village or block value).
+ * - **sequential** (rain): 0 -> the block's own maximum (village or block value)
+ *   while any village is dry (below `dryBelow`), because "dry here, wet there"
+ *   is the story. When every village is wet, a 0-based scale paints 22-25 mm
+ *   as one dark blue, so the scale is fitted to the villages' own range
+ *   (with the block value kept inside) instead. `fit` records which applied,
+ *   so the legend can say so.
  * - **diverging** (everything else): centred on the block value, reaching as
  *   far as the furthest village on either side, so the neutral colour *is* the
  *   official forecast and both sides share one unit-per-colour step.
@@ -241,12 +246,26 @@ export interface RelativeDomain extends ScaleDomain {
   dataMax: number
   /** The official block value. */
   block: number
+  /**
+   * How the range was chosen: `zero` = sequential from 0, `range` = sequential
+   * fitted to the villages' own values, `block` = diverging around the block.
+   */
+  fit: 'zero' | 'range' | 'block'
 }
 
 export function relativeDomain(
   values: number[],
   blockValue: number,
-  opts: { diverging: boolean; minReach: number },
+  opts: {
+    diverging: boolean
+    minReach: number
+    /**
+     * Sequential only: a village below this counts as dry. When none is, the
+     * scale fits the villages' range instead of starting at 0. Omit to always
+     * start at 0.
+     */
+    dryBelow?: number
+  },
 ): RelativeDomain {
   const finite = values.filter((v) => Number.isFinite(v))
   const has = finite.length > 0
@@ -256,8 +275,22 @@ export function relativeDomain(
   const minReach = Number.isFinite(opts.minReach) && opts.minReach > 0 ? opts.minReach : 1e-6
 
   if (!opts.diverging) {
+    const dryBelow = opts.dryBelow
+    const allWet = has && dryBelow !== undefined && Number.isFinite(dryBelow) && dataMin >= dryBelow
+    if (allWet) {
+      let lo = Math.min(dataMin, block)
+      let hi = Math.max(dataMax, block)
+      if (hi - lo < minReach) {
+        // Same guard as the diverging case: a sub-resolution spread stays pale
+        // rather than being stretched across the whole ramp.
+        const centre = (lo + hi) / 2
+        lo = Math.max(0, centre - minReach / 2)
+        hi = lo + minReach
+      }
+      return { min: lo, max: hi, dataMin, dataMax, block, fit: 'range' }
+    }
     const top = Math.max(has ? dataMax : 0, block, minReach)
-    return { min: 0, max: top, dataMin, dataMax, block }
+    return { min: 0, max: top, dataMin, dataMax, block, fit: 'zero' }
   }
 
   const reach = Math.max(
@@ -265,7 +298,7 @@ export function relativeDomain(
     has ? Math.abs(block - dataMin) : 0,
     minReach,
   )
-  return { min: block - reach, max: block + reach, mid: block, dataMin, dataMax, block }
+  return { min: block - reach, max: block + reach, mid: block, dataMin, dataMax, block, fit: 'block' }
 }
 
 function mean(values: number[]): number {

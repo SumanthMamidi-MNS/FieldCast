@@ -5,7 +5,8 @@
  * (`backend/app/services/advisory.py` reads `precip`, `tmax`, `tmin`,
  * `humidity`, `wind`). Labels and units still come from the API response at
  * render time — this registry only supplies presentation concerns the API does
- * not carry: which colour scale to use, how many decimals to show, and the
+ * not carry: which colour scale to use, how many decimals to show (applied by
+ * `format.ts`), and the
  * plain-language sentence a non-meteorologist needs.
  */
 
@@ -34,6 +35,11 @@ export interface VariableMeta {
   resolution: number
   /** Words for the two ends of the scale, lowest first. */
   ends: [string, string]
+  /**
+   * Sequential scales only: below this a village counts as dry. If no village
+   * is dry, the map fits its scale to the villages' range (see `relativeDomain`).
+   */
+  dryBelow?: number
 }
 
 export const VARIABLE_ORDER: VariableKey[] = ['precip', 'tmax', 'tmin', 'humidity', 'wind']
@@ -50,6 +56,7 @@ export const VARIABLES: Record<VariableKey, VariableMeta> = {
     plain: 'Expected rain over the day. Darker blue means more rain.',
     resolution: 1,
     ends: ['Drier', 'Wetter'],
+    dryBelow: 0.5,
   },
   tmax: {
     key: 'tmax',
@@ -107,38 +114,4 @@ export function isVariableKey(value: string): value is VariableKey {
 
 export function variableMeta(key: string): VariableMeta {
   return isVariableKey(key) ? VARIABLES[key] : VARIABLES.precip
-}
-
-/** Units are written tight ("28.0°C", "82%") or spaced ("12.0 mm"). */
-function spacer(unit: string): string {
-  return unit === '%' || unit === '°C' ? '' : ' '
-}
-
-/**
- * Difference from the block value, signed and with unit: "+0.8°C", "−1.2 mm".
- * Differences that round to zero read "±0", so a flat village never looks
- * like it moved. Uses a true minus sign for legibility.
- */
-export function formatDelta(delta: number, key: string, unit?: string): string {
-  const meta = variableMeta(key)
-  const u = unit ?? meta.fallbackUnit
-  if (!Number.isFinite(delta)) return '—'
-  const rounded = Number(delta.toFixed(meta.decimals))
-  if (rounded === 0) return `±0${spacer(u)}${u}`
-  const sign = rounded > 0 ? '+' : '\u2212'
-  return `${sign}${Math.abs(rounded).toFixed(meta.decimals)}${spacer(u)}${u}`
-}
-
-/** A bare number at the variable's precision, no unit. */
-export function formatNumber(value: number, key: string): string {
-  if (!Number.isFinite(value)) return '—'
-  return value.toFixed(variableMeta(key).decimals)
-}
-
-/** Format a value the way the officer should read it, with unit. */
-export function formatValue(value: number, key: string, unit?: string): string {
-  const meta = variableMeta(key)
-  const u = unit ?? meta.fallbackUnit
-  if (!Number.isFinite(value)) return `— ${u}`
-  return `${value.toFixed(meta.decimals)}${spacer(u)}${u}`
 }

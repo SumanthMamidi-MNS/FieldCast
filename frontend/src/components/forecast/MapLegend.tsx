@@ -1,7 +1,8 @@
 import { useId, useState } from 'react'
 import type { ColorScale, RelativeDomain } from '../../lib/colorScale'
 import { SUPPORT_LEVELS, confidenceStyle } from '../../lib/confidenceTexture'
-import { formatNumber, variableMeta, type VariableKey } from '../../lib/variables'
+import { formatNumber, formatRange, formatValue } from '../../lib/format'
+import { variableMeta, type VariableKey } from '../../lib/variables'
 import { Icon } from '../common/Icon'
 import { TextureSwatch } from '../common/TextureSwatch'
 
@@ -32,6 +33,16 @@ export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: Map
   const pct = (v: number) => `${(scale.normalize(v) * 100).toFixed(2)}%`
   const hasData = Number.isFinite(domain.dataMin) && Number.isFinite(domain.dataMax)
   const n = (v: number) => formatNumber(v, variableKey)
+  // Sequential scales say where they start, because it changes what pale means.
+  const scaleNote =
+    domain.fit === 'range'
+      ? {
+          lead: `Scale fitted to this block: ${formatRange(domain.min, domain.max, variableKey, unit)}.`,
+          rest: 'Every village is wet, so colour shows how they differ, not total rain.',
+        }
+      : domain.fit === 'zero'
+        ? { lead: `Scale runs from 0 to ${formatValue(domain.max, variableKey, unit)}.`, rest: '' }
+        : null
 
   return (
     <section className={`legend${open ? ' is-open' : ''}`} aria-label="Map legend">
@@ -56,7 +67,7 @@ export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: Map
           role="img"
           aria-label={
             hasData
-              ? `Colour scale. Block forecast ${n(domain.block)} ${unit}. Villages range from ${n(domain.dataMin)} to ${n(domain.dataMax)} ${unit}.`
+              ? `Colour scale. Block forecast ${n(domain.block)} ${unit}. Villages range from ${n(domain.dataMin)} to ${n(domain.dataMax)} ${unit}.${scaleNote ? ` ${scaleNote.lead}` : ''}`
               : `Colour scale centred on the block forecast of ${n(domain.block)} ${unit}.`
           }
         >
@@ -73,6 +84,12 @@ export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: Map
           <span>{meta.ends[0]}</span>
           <span>{meta.ends[1]}</span>
         </div>
+        {scaleNote && (
+          <p className={`legend-fit${domain.fit === 'range' ? ' is-fitted' : ''}`}>
+            <strong className="num">{scaleNote.lead}</strong>
+            {scaleNote.rest && ` ${scaleNote.rest}`}
+          </p>
+        )}
 
         <dl className="legend-stats">
           <div>

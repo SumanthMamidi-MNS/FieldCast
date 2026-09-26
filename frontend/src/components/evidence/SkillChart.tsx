@@ -7,6 +7,7 @@ import {
   type Outcome,
 } from '../../lib/evidence'
 import { Icon, type IconName } from '../common/Icon'
+import { formatPercent } from '../../lib/format'
 
 const OUTCOME_ICON: Record<Outcome, IconName> = {
   'clear-win': 'check',
@@ -109,7 +110,7 @@ export function SkillChart({
                       <span className="cov-target" />
                     </div>
                     <p className="cov-text num">
-                      <strong>{Math.round(cov * 100)}%</strong> of days inside, {coverageWords(cov)}
+                      <strong>{formatPercent(cov)}</strong> of days inside, {coverageWords(cov)}
                     </p>
                   </>
                 ) : (

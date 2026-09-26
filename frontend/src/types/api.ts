@@ -211,6 +211,16 @@ export interface RegionInfo {
   districts: string[]
   /** True when this region has its own trained models. */
   served: boolean
+  /**
+   * Inclusive [start, end] ISO dates with recorded block values (historical
+   * replay). Backend default is `[]`. Optional here only because the
+   * in-browser mock and older backends omit it; `lib/dates.ts` falls back then.
+   */
+  replay_windows?: [string, string][]
+  /** Live forecasts reach this many days before today (backend default 1). */
+  live_days_back?: number
+  /** Live forecasts reach this many days after today (backend default 15). */
+  live_days_ahead?: number
 }
 
 /*

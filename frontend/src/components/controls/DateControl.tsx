@@ -1,17 +1,21 @@
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import {
-  DATE_HINT_SHORT,
-  PAST_SEASON_EXAMPLE,
   dateKind,
+  describeCalendar,
   formatLongDate,
+  formatMediumDate,
   isIsoDate,
+  pastSeasonExample,
   stepDate,
+  type DateCalendar,
 } from '../../lib/dates'
 import { Icon } from '../common/Icon'
 
 interface DateControlProps {
   value: string
   today: string
+  /** Servable windows for the current region, from `GET /api/regions`. */
+  calendar: DateCalendar
   onChange: (date: string) => void
   /** Hide the quick chips (compact phone bar). */
   chips?: boolean
@@ -22,7 +26,7 @@ interface DateControlProps {
  * native date input for jumping, and two quick chips. The servable windows are
  * disjoint, which a native min/max cannot express, so they are stated in words.
  */
-export function DateControl({ value, today, onChange, chips = true }: DateControlProps) {
+export function DateControl({ value, today, calendar, onChange, chips = true }: DateControlProps) {
   const id = useId()
   const [draft, setDraft] = useState(value)
   const [prevValue, setPrevValue] = useState(value)
@@ -33,9 +37,11 @@ export function DateControl({ value, today, onChange, chips = true }: DateContro
     setDraft(value)
   }
 
-  const prev = stepDate(value, -1, today)
-  const next = stepDate(value, 1, today)
-  const kind = dateKind(value, today)
+  const prev = stepDate(value, -1, today, calendar)
+  const next = stepDate(value, 1, today, calendar)
+  const kind = dateKind(value, today, calendar)
+  const hint = useMemo(() => describeCalendar(calendar), [calendar])
+  const example = useMemo(() => pastSeasonExample(calendar), [calendar])
   const hintId = `${id}-hint`
 
   return (
@@ -46,7 +52,7 @@ export function DateControl({ value, today, onChange, chips = true }: DateContro
         </label>
         <span id={hintId} className={`control-hint${kind === 'unavailable' ? ' is-warn' : ''}`}>
           {kind === 'unavailable' ? 'No data for this date. ' : ''}
-          {DATE_HINT_SHORT}
+          {hint}
         </span>
       </div>
       <div className="date-row">
@@ -92,15 +98,17 @@ export function DateControl({ value, today, onChange, chips = true }: DateContro
             >
               Today
             </button>
-            <button
-              type="button"
-              className={`chip${value === PAST_SEASON_EXAMPLE ? ' is-on' : ''}`}
-              aria-pressed={value === PAST_SEASON_EXAMPLE}
-              onClick={() => onChange(PAST_SEASON_EXAMPLE)}
-              title="20 Jul 2023, a monsoon day from a season the model never trained on"
-            >
-              Past season example
-            </button>
+            {example && (
+              <button
+                type="button"
+                className={`chip${value === example ? ' is-on' : ''}`}
+                aria-pressed={value === example}
+                onClick={() => onChange(example)}
+                title={`${formatMediumDate(example)}, a recorded day from a season the model never trained on`}
+              >
+                Past season example
+              </button>
+            )}
           </div>
         )}
       </div>

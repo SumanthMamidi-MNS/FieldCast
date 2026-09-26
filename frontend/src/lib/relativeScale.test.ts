@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { isDiverging, luminance, relativeDomain } from './colorScale'
 import { blockScale } from './mapScale'
 import { variable, village } from './testFixtures'
-import { formatDelta } from './variables'
 
 describe('relativeDomain — diverging', () => {
   it('centres on the block value and reaches the furthest village', () => {
@@ -29,6 +28,7 @@ describe('relativeDomain — diverging', () => {
 describe('relativeDomain — sequential rain', () => {
   it('runs from zero to the block maximum', () => {
     const d = relativeDomain([0, 3.2, 8.61], 1.92, { diverging: false, minReach: 1 })
+    expect(d.fit).toBe('zero')
     expect(d.min).toBe(0)
     expect(d.max).toBe(8.61)
     expect(d.mid).toBeUndefined()
@@ -40,6 +40,45 @@ describe('relativeDomain — sequential rain', () => {
 
   it('does not paint a dry block dark blue', () => {
     expect(relativeDomain([0, 0.1], 0, { diverging: false, minReach: 1 }).max).toBe(1)
+  })
+})
+
+describe('relativeDomain — rain when every village is wet', () => {
+  const opts = { diverging: false, minReach: 1, dryBelow: 0.5 }
+
+  it('fits the villages range instead of starting at zero', () => {
+    const d = relativeDomain([22.1, 23.4, 24.9], 24, opts)
+    expect(d.fit).toBe('range')
+    expect(d.min).toBeCloseTo(22.1, 6)
+    expect(d.max).toBeCloseTo(24.9, 6)
+  })
+
+  it('stays zero-anchored while any village is dry', () => {
+    const d = relativeDomain([0.2, 6, 12], 5, opts)
+    expect(d.fit).toBe('zero')
+    expect(d.min).toBe(0)
+    expect(d.max).toBe(12)
+  })
+
+  it('keeps the block value inside the fitted range', () => {
+    const d = relativeDomain([22, 23], 25, opts)
+    expect(d.min).toBe(22)
+    expect(d.max).toBe(25)
+  })
+
+  it('does not amplify a sub-resolution spread', () => {
+    const d = relativeDomain([23.1, 23.3], 23.2, opts)
+    expect(d.max - d.min).toBeCloseTo(1, 6)
+    expect(d.min).toBeCloseTo(22.7, 6)
+  })
+
+  it('makes the 24 mm bulletin case visibly different on the map', () => {
+    const rows = [22, 23, 24, 25].map((v, i) => village(`p${i}`, `V${i}`, { precip: variable('precip', v, 24) }))
+    const { scale, domain } = blockScale(rows, 'precip')
+    expect(domain.fit).toBe('range')
+    expect(scale.normalize(22)).toBeLessThan(0.05)
+    expect(scale.normalize(25)).toBeGreaterThan(0.95)
+    expect(Math.abs(luminance(scale.color(22)) - luminance(scale.color(25)))).toBeGreaterThan(0.3)
   })
 })
 
@@ -66,17 +105,5 @@ describe('blockScale on the wind case the owner reported', () => {
     const hi = scale.color(32.8)
     expect(lo).not.toBe(hi)
     expect(Math.abs(luminance(lo) - luminance(hi))).toBeGreaterThan(0.05)
-  })
-})
-
-describe('formatDelta', () => {
-  it('signs and units the difference from the block', () => {
-    expect(formatDelta(0.84, 'tmax', '°C')).toBe('+0.8°C')
-    expect(formatDelta(-1.26, 'precip', 'mm')).toBe('−1.3 mm')
-  })
-
-  it('never shows a flat village as having moved', () => {
-    expect(formatDelta(0.04, 'tmax', '°C')).toBe('±0°C')
-    expect(formatDelta(-0.4, 'humidity', '%')).toBe('±0%')
   })
 })
