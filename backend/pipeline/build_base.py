@@ -48,7 +48,12 @@ def build_base(
     panchayats = build_panchayat_units(cfg, blocks)
     save_panchayat_units(panchayats, cfg)
     n_villages = int(panchayats["n_villages"].sum())
-    console.print(f"  {n_villages} villages clustered into {len(panchayats)} panchayat-proxy units")
+    kinds = panchayats["unit_type"].value_counts().to_dict() if "unit_type" in panchayats else {}
+    console.print(
+        f"  {n_villages} villages -> {len(panchayats)} units "
+        f"({kinds.get('gram_panchayat', 0)} gram panchayats, "
+        f"{kinds.get('village_cluster', 0)} village clusters)"
+    )
 
     console.print("[cyan]Step 3/3[/cyan]: GHCN station index...")
     bbox = tuple(blocks.total_bounds)

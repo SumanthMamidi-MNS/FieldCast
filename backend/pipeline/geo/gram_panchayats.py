@@ -59,65 +59,121 @@ def _find_col(columns: list[str], *must: str, avoid: tuple[str, ...] = ()) -> st
     return None
 
 
-def read_lgd_mapping(path: Path) -> pd.DataFrame:
-    """Parse an LGD village-to-gram-panchayat file into a canonical table.
-
-    Column headers vary between LGD exports, so columns are found by keywords.
-    Returns: census_2011, village_name, subdistrict_name, gp_code, gp_name.
-    """
-    if path.suffix.lower() in {".xls", ".xlsx"}:
-        raw = pd.read_excel(path, dtype=str)
-    else:
-        raw = pd.read_csv(path, dtype=str, encoding_errors="replace")
+def _read_table(path: Path) -> pd.DataFrame:
+    """Read an LGD export, locating the header row (LGD puts a title row first)."""
+    reader = pd.read_excel if path.suffix.lower() in {".xls", ".xlsx"} else pd.read_csv
+    kwargs = {} if reader is pd.read_excel else {"encoding_errors": "replace"}
+    probe = reader(path, header=None, nrows=10, dtype=str, **kwargs)
+    header_row = 0
+    for i, row in probe.iterrows():
+        cells = [str(c).strip().lower() for c in row if pd.notna(c)]
+        if any("local body" in c or "gram panchayat" in c for c in cells) and len(cells) > 3:
+            header_row = int(i)
+            break
+    raw = reader(path, header=header_row, dtype=str, **kwargs)
     raw.columns = [str(c).strip() for c in raw.columns]
+    return raw
+
+
+def read_lgd_mapping(path: Path) -> pd.DataFrame:
+    """Parse an LGD village-to-gram-panchayat export into a canonical table.
+
+    Column headers vary between LGD exports, so columns are found by keywords,
+    always preferring the *village* census columns over district/sub-district
+    ones. A local-body code of 0 means the village has no gram panchayat (urban
+    or unassigned) and is dropped.
+    Returns: census_2011, census_2001, village_name, subdistrict_name,
+    district_name, gp_code, gp_name.
+    """
+    raw = _read_table(path)
     cols = list(raw.columns)
 
-    census = _find_col(cols, "census", "2011")
+    def village_census(year: str) -> str | None:
+        return _find_col(cols, "village", "census", year) or _find_col(
+            cols, "census", year, avoid=("district",)
+        )
+
+    census_11 = village_census("2011")
+    census_01 = village_census("2001")
     vname = _find_col(cols, "village", "name", avoid=("local",)) or _find_col(cols, "village", "name")
-    subdist = _find_col(cols, "sub", "district", "name", avoid=("local",)) or _find_col(
-        cols, "sub", "district", "name"
-    )
+    subdist = _find_col(cols, "subdistrict", "name") or _find_col(cols, "sub", "district", "name")
+    dist = _find_col(cols, "district", "name", avoid=("sub",))
     gp_code = (
         _find_col(cols, "local body code")
         or _find_col(cols, "gram panchayat code")
         or _find_col(cols, "panchayat", "code")
     )
     gp_name = (
-        _find_col(cols, "local body name", avoid=("local)",))
-        or _find_col(cols, "local body name")
+        _find_col(cols, "local body name")
         or _find_col(cols, "gram panchayat name")
         or _find_col(cols, "panchayat", "name")
     )
-    if gp_code is None or gp_name is None or (census is None and vname is None):
+    if gp_code is None or gp_name is None or (census_11 is None and census_01 is None and vname is None):
         raise LgdFormatError(
             f"could not identify village / gram-panchayat columns in {path.name}; "
             f"found columns: {cols}"
         )
 
+    def code(col: str | None) -> pd.Series | None:
+        if col is None:
+            return None
+        s = raw[col].astype("string").str.strip().str.replace(r"\.0$", "", regex=True).str.lstrip("0")
+        return s.mask(s.isin(["", "nan", "<NA>"]))
+
     out = pd.DataFrame(
         {
-            "census_2011": raw[census].str.strip().str.lstrip("0") if census else None,
+            "census_2011": code(census_11),
+            "census_2001": code(census_01),
             "village_name": raw[vname].map(normalise_name) if vname else None,
             "subdistrict_name": raw[subdist].map(normalise_name) if subdist else None,
-            "gp_code": raw[gp_code].str.strip(),
-            "gp_name": raw[gp_name].str.strip(),
+            "district_name": raw[dist].map(normalise_name) if dist else None,
+            "gp_code": code(gp_code),
+            "gp_name": raw[gp_name].astype("string").str.strip(),
         }
     )
     return out.dropna(subset=["gp_code"]).reset_index(drop=True)
 
 
+# LGD uses current district names; GADM (and our region config) older ones.
+_DISTRICT_ALIASES = {
+    "ahmadnagar": {"ahilyanagar", "ahmednagar"},
+    "belgaum": {"belagavi"},
+    "shimoga": {"shivamogga"},
+    "chikmagalur": {"chikkamagaluru"},
+    "raigad": {"raigarh"},
+}
+
+
+def _district_keys(region: Region) -> set[str]:
+    keys: set[str] = set()
+    for d in region.districts:
+        k = normalise_name(d)
+        keys.add(k)
+        keys |= _DISTRICT_ALIASES.get(k, set())
+    return keys
+
+
 def find_lgd_file(region: Region) -> Path | None:
-    """The LGD export for this region's state, if someone has downloaded it."""
+    """The LGD export covering this region's districts, identified by content.
+
+    LGD names its downloads by timestamp, not state, so each file's district
+    names are compared with the region's (allowing for renamed districts).
+    """
     if not LGD_DIR.exists():
         return None
-    state = region.state_name.lower()
+    wanted = _district_keys(region)
+    best, best_hits = None, 0
     for path in sorted(LGD_DIR.iterdir()):
-        name = path.name.lower()
-        if path.suffix.lower() in {".csv", ".xls", ".xlsx"} and (
-            state in name or region.datameet_code == name[:2]
-        ):
-            return path
-    return None
+        if path.suffix.lower() not in {".csv", ".xls", ".xlsx"}:
+            continue
+        try:
+            districts = set(read_lgd_mapping(path)["district_name"].dropna())
+        except (LgdFormatError, ValueError, KeyError):
+            continue
+        hits = len(wanted & districts)
+        if hits > best_hits:
+            best, best_hits = path, hits
+    return best
 
 
 def _crosswalk_2001_to_2011(code: str) -> pd.DataFrame | None:
@@ -161,7 +217,20 @@ def assign_gram_panchayats(
             return out
         lgd = read_lgd_mapping(path)
 
-    # 1. census-code join
+    # 1. census 2001 village code, carried directly by the village polygons
+    if "cen_2001" in villages.columns and lgd["census_2001"].notna().any():
+        v01 = villages["cen_2001"].astype("string").str.strip()
+        # Maharashtra polygons store an 18-digit composite whose last 8 digits
+        # are the village code; Karnataka stores the 8-digit code itself.
+        v01 = v01.str[-8:].str.lstrip("0")
+        by01 = lgd.dropna(subset=["census_2001"])
+        by01 = by01[~by01["census_2001"].duplicated(keep=False)].set_index("census_2001")
+        hit = v01.isin(by01.index) & v01.notna()
+        out.loc[hit, "gp_code"] = by01.loc[v01[hit], "gp_code"].to_numpy()
+        out.loc[hit, "gp_name"] = by01.loc[v01[hit], "gp_name"].to_numpy()
+        out.loc[hit, "match_method"] = "census_2001_code"
+
+    # 2. census 2011 code through the published 2001->2011 crosswalk
     if "cen_2001" in villages.columns and lgd["census_2011"].notna().any():
         xwalk = _crosswalk_2001_to_2011(region.datameet_code)
         if xwalk is not None:
@@ -169,12 +238,12 @@ def assign_gram_panchayats(
             codes.index = villages.index
             by_code = lgd.dropna(subset=["census_2011"]).drop_duplicates("census_2011")
             by_code = by_code.set_index("census_2011")
-            hit = codes.isin(by_code.index)
+            hit = codes.isin(by_code.index) & out["gp_code"].isna()
             out.loc[hit, "gp_code"] = by_code.loc[codes[hit], "gp_code"].to_numpy()
             out.loc[hit, "gp_name"] = by_code.loc[codes[hit], "gp_name"].to_numpy()
-            out.loc[hit, "match_method"] = "census_code"
+            out.loc[hit, "match_method"] = "census_2011_code"
 
-    # 2. unique name within sub-district, for what is still unmatched
+    # 3. unique name within sub-district, for what is still unmatched
     if lgd["village_name"].notna().any() and "subdistrict" in villages.columns:
         keyed = lgd.dropna(subset=["village_name", "subdistrict_name"]).copy()
         keyed["_k"] = keyed["subdistrict_name"] + "|" + keyed["village_name"]

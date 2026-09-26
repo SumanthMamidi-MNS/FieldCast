@@ -138,7 +138,9 @@ def load_village_polygons(region: Region) -> gpd.GeoDataFrame:
             # their real gram panchayats (see geo.gram_panchayats). Column names
             # differ between the Maharashtra and Karnataka files.
             "subdistrict": combined.get("SUB_DIST", combined.get("TALUK", pd.Series([None] * len(combined)))),
-            "cen_2001": combined.get("CEN_2001", pd.Series([None] * len(combined))).astype("string"),
+            "cen_2001": combined.get(
+                "CEN_2001", combined.get("V_CT_CODE", pd.Series([None] * len(combined)))
+            ).astype("string"),
             "geometry": combined["geometry"],
         },
         crs=combined.crs,

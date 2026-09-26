@@ -30,6 +30,7 @@ pipeline = [
     "typer>=0.12",
     "rich>=13.9",
     "pillow>=10",
+    "openpyxl>=3.1",
 ]
 dev = [
     "pytest>=8.3",
