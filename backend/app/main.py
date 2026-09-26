@@ -168,7 +168,7 @@ def evaluation(region: str = Query(PRIMARY_REGION)) -> list[BaselineComparison]:
                     interval_coverage=r["interval_coverage_80"],
                     n_observations=r["n"],
                     tier=Tier("T2" if tier == "T2_hist" else tier),
-                    region=f"{region} (1960-61 gauges)" if tier == "T2_hist" else region,
+                    region=f"{region} (1960 gauges)" if tier == "T2_hist" else region,
                 )
             )
     return out

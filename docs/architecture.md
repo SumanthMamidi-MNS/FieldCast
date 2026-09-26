@@ -33,7 +33,7 @@ And panchayat-scale ground truth barely exists.
 | Tier | Step | Ground truth | Status |
 |---|---|---|---|
 | **T1** | Block → ~16 km grid (ERA5 blend) | Dense reanalysis | **Measured** on held-out seasons |
-| **T2** | → real gauge point | GHCN: 4 modern gauges + ~100 per state in 1960-61 | **Measured** |
+| **T2** | → real gauge point | GHCN: 4 modern gauges + ~100 per state in 1960 | **Measured** |
 | **T3** | → panchayat polygon (~35–50 km²) | None | **Inference**; gauge-calibrated interval, support capped at moderate |
 
 ---
@@ -104,7 +104,7 @@ predictor's output exactly.
   training terrain + 0.4 × gauge proximity (0 at 50 km) − tier penalty; T3 capped
   at "moderate". Low support widens the interval up to 2×.
 - **Point-scale interval factor:** per gauge-validated variable, fitted on the
-  1958-59 historical gauge seasons so the 80% interval covers ~80% of gauge
+  1958 historical gauge season so the 80% interval covers ~80% of gauge
   observations; applied to T2/T3. Humidity and wind (no gauges) keep ×1.35.
 - **Reconciliation:** area-weighted panchayat values re-aggregate to the block
   value; rain is reconciled in expectation (Σ P(wet) × amount), not by median.
@@ -189,7 +189,7 @@ for replay dates and officer-supplied bulletins.
 3. The target is a reanalysis (ERA5 blend), not an IMD operational product; IMD
    block values can be supplied through the API but were not used in training.
 4. Modern gauges are scarce (4 in modelled MH blocks); the ~100-gauge test uses
-   1960-61, when the reanalysis assimilated fewer observations.
+   1960, when the reanalysis assimilated fewer observations.
 5. Models do not transfer across regions for rainfall amounts; each region needs
    its own training (MH and KA are trained separately).
 6. Humidity and wind have no gauge validation and keep a fixed T3 inflation.

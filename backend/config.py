@@ -218,15 +218,15 @@ class TrainingWindow:
     # Historical gauge seasons. India's older station network ended around 1970,
     # leaving ~100 gauges per state with dense monsoon records in 1956-61 versus
     # only 4 today. The reanalysis covers those years, so they give a far larger
-    # real-gauge test. Never used for training: 1958-59 calibrate the
-    # point-scale interval factor, 1960-61 are the historical gauge test.
+    # real-gauge test. Never used for training: 1958 calibrates the
+    # point-scale interval factor, 1960 is the historical gauge test.
+    # One season each: ~98 gauges x 122 days is ~12k gauge-days per season,
+    # ample for both jobs, and each extra season costs ~a day of API quota.
     gauge_calibration_seasons: tuple[Season, ...] = (
         Season("1958-06-01", "1958-09-30", "monsoon"),
-        Season("1959-06-01", "1959-09-30", "monsoon"),
     )
     gauge_test_seasons: tuple[Season, ...] = (
         Season("1960-06-01", "1960-09-30", "monsoon", test=True),
-        Season("1961-06-01", "1961-09-30", "monsoon", test=True),
     )
     # Grid spacing (degrees). ~16km gives ~3.5 fine points per block, the minimum
     # for a non-degenerate within-block anomaly, while fitting the call budget.

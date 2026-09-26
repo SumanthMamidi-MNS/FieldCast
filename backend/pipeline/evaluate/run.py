@@ -445,7 +445,7 @@ def write_markdown(report: dict, path) -> None:
     for tier, title in (
         ("T1", "T1 — held-out seasons, dense field (~16 km)"),
         ("T2", "T2 — real gauges, held-out 2022-23 seasons (never used in training)"),
-        ("T2_hist", "T2 (historical) — real gauges, 1960-61 monsoons (~100 gauges, never used in training)"),
+        ("T2_hist", "T2 (historical) — real gauges, 1960 monsoon (~100 gauges, never used in training)"),
     ):
         res = report.get(tier, {})
         lines += [f"## {title}", ""]
