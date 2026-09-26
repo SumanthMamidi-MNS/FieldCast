@@ -237,6 +237,26 @@ def train_region(
     return summary
 
 
+def build_features_only(
+    region: Region, seasons: tuple[tuple[str, str], ...], step_deg: float
+) -> dict[str, int]:
+    """Grid, terrain and per-variable feature tables, with no model training.
+
+    Used for the transfer region: Karnataka must be evaluated by models that
+    never saw it, so we build its inputs and deliberately stop before fitting.
+    """
+    blocks = gpd.read_parquet(PROCESSED_DIR / f"blocks_{region.key}.parquet")
+    points = attach_terrain(build_grid_for_region(blocks, step_deg=step_deg))
+    panel = assemble_panel(points, fetch_weather_panel(points, seasons))
+    points.to_parquet(PROCESSED_DIR / f"grid_{region.key}.parquet", index=False)
+    counts = {}
+    for key in VARIABLES:
+        table = variable_table(panel, key)
+        table.to_parquet(PROCESSED_DIR / f"features_{region.key}_{key}.parquet", index=False)
+        counts[key] = len(table)
+    return counts
+
+
 def _fit_and_save_support(points: pd.DataFrame, artifact_root) -> None:
     """Fit the training-manifold description used for epistemic support scoring."""
     cols = [c for c in TERRAIN_COLUMNS if c in points.columns]
@@ -278,6 +298,16 @@ def run(
 ) -> None:
     if region not in REGIONS:
         raise typer.BadParameter(f"unknown region {region!r}; have {sorted(REGIONS)}")
+
+    cfg = REGIONS[region]
+    if cfg.is_transfer:
+        # Transfer regions are never trained on; only the test season is needed.
+        test_seasons = tuple(
+            s for s in TRAINING_WINDOW.seasons if int(s[0][:4]) in TRAINING_WINDOW.test_years
+        )
+        counts = build_features_only(cfg, test_seasons, step_deg)
+        console.print(f"[green]transfer features built (no training):[/green] {counts}")
+        return
 
     if quick:
         seasons: tuple[tuple[str, str], ...] = (("2022-06-01", "2022-09-30"),)

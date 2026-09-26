@@ -55,11 +55,29 @@ class ApiBudgetExceeded(RuntimeError):
 # the binding one for a training run, so pace to ~85% of it: slow, but a run that
 # finishes beats a fast one that aborts part-way.
 _HOURLY_BUDGET = 5000
-_PACE_S_PER_WEIGHT = 3600.0 / (_HOURLY_BUDGET * 0.85)
+_MINUTELY_BUDGET = 600
+_PACE_S_PER_WEIGHT = {
+    "hourly": 3600.0 / (_HOURLY_BUDGET * 0.85),
+    "minutely": 60.0 / (_MINUTELY_BUDGET * 0.85),
+}
+_pacing_mode = "hourly"
+
+
+def set_pacing(mode: str) -> None:
+    """Choose pacing: "hourly" for long pipeline runs, "minutely" for the API.
+
+    An interactive request is small (one block's terrain is ~200 lookups), so
+    pacing it to the hourly budget made a first map load take minutes; it only
+    needs to respect the minutely limit.
+    """
+    global _pacing_mode
+    if mode not in _PACE_S_PER_WEIGHT:
+        raise ValueError(f"unknown pacing mode {mode!r}")
+    _pacing_mode = mode
 
 
 def _pace(weight: float) -> None:
-    time.sleep(max(INTER_CALL_DELAY_S, weight * _PACE_S_PER_WEIGHT))
+    time.sleep(max(INTER_CALL_DELAY_S, weight * _PACE_S_PER_WEIGHT[_pacing_mode]))
 
 
 @retry(

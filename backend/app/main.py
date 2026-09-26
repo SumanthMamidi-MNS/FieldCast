@@ -24,6 +24,11 @@ from backend.app.schemas import (
 from backend.app.services import forecast as svc
 from backend.config import ARTIFACT_DIR, PRIMARY_REGION, REGIONS, REPORT_DIR
 from backend.pipeline.models.downscaler import MODEL_VERSION
+from backend.pipeline.sources.open_meteo import set_pacing
+
+# Interactive requests are small; pace them to the minutely limit, not the hourly
+# budget that long training runs need.
+set_pacing("minutely")
 
 app = FastAPI(
     title="Panchayat Weather Downscaling API",

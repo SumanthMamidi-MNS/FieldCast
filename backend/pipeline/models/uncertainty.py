@@ -27,13 +27,10 @@ from dataclasses import dataclass
 
 import numpy as np
 from scipy.spatial.distance import cdist
+from scipy.stats import chi2
 
 from backend.app.schemas import SupportLevel, Tier
 from backend.config import SUPPORT_LABELS, T3_INTERVAL_INFLATION
-
-# Mahalanobis distance (in units of sigma) at which support from terrain
-# similarity has fully decayed. 3 sigma is the conventional "clearly outside".
-_MAX_MAHALANOBIS = 3.0
 
 # Gauge distance (km) beyond which observational support is treated as absent.
 # 50km is roughly the scale over which convective rainfall decorrelates in the
@@ -132,6 +129,23 @@ def nearest_gauge_km(
     return d_deg * 111.32
 
 
+def covariate_support(maha: np.ndarray, n_dims: int) -> np.ndarray:
+    """Terrain-similarity support from Mahalanobis distance, scaled for dimension.
+
+    A fixed sigma cut-off is wrong in several dimensions: in 7-D a perfectly
+    typical training point already sits about sqrt(7) ~ 2.6 sigma from the centre,
+    so a 3-sigma cap scored the training data itself as barely supported. Under a
+    Gaussian reference the squared distance is chi-square with n_dims degrees of
+    freedom; support is 1 for the typical half of the training terrain and decays
+    to 0 in the extreme tail (2 x survival probability, clipped).
+    """
+    maha = np.asarray(maha, dtype=float)
+    out = np.zeros_like(maha)
+    finite = np.isfinite(maha)
+    out[finite] = np.clip(2.0 * chi2.sf(maha[finite] ** 2, df=max(n_dims, 1)), 0.0, 1.0)
+    return out
+
+
 def support_score(
     features: np.ndarray,
     model: SupportModel,
@@ -141,8 +155,7 @@ def support_score(
 ) -> np.ndarray:
     """Combine the signals into a 0-1 support score. 1 = fully supported."""
     maha = model.mahalanobis(features)
-    cov_component = np.clip(1.0 - maha / _MAX_MAHALANOBIS, 0.0, 1.0)
-    cov_component = np.where(np.isfinite(maha), cov_component, 0.0)
+    cov_component = covariate_support(maha, len(model.columns))
 
     gauge_km = nearest_gauge_km(lats, lons, model.gauge_coords)
     gauge_component = np.clip(1.0 - gauge_km / _MAX_GAUGE_KM, 0.0, 1.0)

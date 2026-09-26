@@ -29,6 +29,7 @@ from rich.table import Table
 
 from backend.app.schemas import Tier
 from backend.config import (
+    ARTIFACT_DIR,
     GEOGRAPHIC_CRS,
     PROCESSED_DIR,
     REGIONS,
@@ -107,9 +108,19 @@ def reconcile_by_group(
     return out
 
 
-def _verdict(skill: float, lo: float) -> str:
+# Below this many independent clusters a bootstrap interval is not trustworthy,
+# so we refuse to call a result significant however the interval looks.
+_MIN_CLUSTERS_FOR_SIGNIFICANCE = 8
+
+
+def _verdict(skill: float, lo: float, n_clusters: int) -> str:
     if not np.isfinite(skill):
         return "not evaluable"
+    if n_clusters < _MIN_CLUSTERS_FOR_SIGNIFICANCE:
+        return (
+            f"{'beats' if skill > 0 else 'does NOT beat'} naive "
+            f"(only {n_clusters} gauges: significance not testable)"
+        )
     if skill > 0 and np.isfinite(lo) and lo > 0:
         return "beats naive (significant)"
     if skill > 0:
@@ -149,7 +160,7 @@ def _variable_report(
         "naive_rmse": naive.rmse,
         "skill_vs_naive": s,
         "skill_ci90": [lo, hi],
-        "verdict": _verdict(s, lo),
+        "verdict": _verdict(s, lo, int(np.unique(clusters).size)),
         "interval_coverage_80": cov,
         "interval_width": width,
         "pit_ks": pit,
@@ -256,12 +267,18 @@ def _station_terrain(stations: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([base, terr], axis=1)
 
 
-def evaluate_t2(region_key: str, predictor: Predictor, test_only: bool = True) -> dict:
+def gauge_datasets(
+    region_key: str, predictor: Predictor, years: set[int]
+) -> dict[str, tuple[pd.DataFrame, pd.DataFrame]]:
+    """(rows, features) per gauge-validated variable, for monsoon days in `years`.
+
+    `rows` carries the observation (`value`), `block_value` and `station_id`;
+    `features` is aligned row-for-row and built through the served code path.
+    """
     from backend.pipeline.sources.ghcn import load_station_daily
 
     st_path = PROCESSED_DIR / f"stations_{region_key}.parquet"
     if not st_path.exists():
-        console.print("  [yellow]no station index; T2 skipped[/yellow]")
         return {}
     stations = pd.read_parquet(st_path)
     blocks = gpd.read_parquet(PROCESSED_DIR / f"blocks_{region_key}.parquet")
@@ -276,24 +293,18 @@ def evaluate_t2(region_key: str, predictor: Predictor, test_only: bool = True) -
     inside = inside[~inside["station_id"].duplicated()]
     inside = inside[inside["block_id"].isin(predictor.stats.index)].reset_index(drop=True)
     if inside.empty:
-        console.print("  [yellow]no gauges fall inside a modelled block; T2 skipped[/yellow]")
         return {}
-    console.print(f"  {len(inside)} gauges inside modelled blocks")
-
     inside = _station_terrain(inside)
 
     seasons = TRAINING_WINDOW.seasons
-    test_years = set(TRAINING_WINDOW.test_years)
     elements = sorted({v.ghcn_element for v in VARIABLES.values() if v.ghcn_element})
     obs = load_station_daily(
         inside["station_id"].tolist(), seasons[0][0], seasons[-1][1], elements=elements
     )
     obs["date"] = pd.to_datetime(obs["date"])
-    obs = obs[obs["date"].dt.month.isin(TRAINING_WINDOW.months)]
-    if test_only:
-        obs = obs[obs["date"].dt.year.isin(test_years)]
+    obs = obs[obs["date"].dt.month.isin(TRAINING_WINDOW.months) & obs["date"].dt.year.isin(years)]
 
-    results = {}
+    out = {}
     for key, var in VARIABLES.items():
         if var.ghcn_element is None or key not in predictor.models:
             continue
@@ -307,14 +318,12 @@ def evaluate_t2(region_key: str, predictor: Predictor, test_only: bool = True) -
             .reset_index()
         )
         bvals["date"] = pd.to_datetime(bvals["date"])
-
         o = obs[obs["element"] == var.ghcn_element][["station_id", "date", "value"]]
         rows = o.merge(inside, on="station_id").merge(bvals, on=["block_id", "date"])
-        rows = rows.dropna(subset=["value", "block_value"])
+        rows = rows.dropna(subset=["value", "block_value"]).reset_index(drop=True)
         if len(rows) < 30:
-            console.print(f"  [yellow]T2 {key}: only {len(rows)} gauge-days; skipped[/yellow]")
+            console.print(f"  [yellow]gauges {key} {sorted(years)}: only {len(rows)} days; skipped[/yellow]")
             continue
-
         targets = rows.rename(columns={"latitude": "lat", "longitude": "lon"})
         feats = build_target_features(
             targets.drop(columns=["block_value", "date"]),
@@ -322,15 +331,60 @@ def evaluate_t2(region_key: str, predictor: Predictor, test_only: bool = True) -
             targets["block_value"].to_numpy(),
             targets["date"],
         )
+        out[key] = (rows, feats)
+    return out
+
+
+def calibrate_point_scale(region_key: str, predictor: Predictor, years: set[int]) -> dict:
+    """Interval widening needed at point scale, fitted on gauge-days from `years`.
+
+    The model is trained to reproduce ~16 km grid values, whose spread is far
+    smaller than a single rain gauge's. Left alone, the published 80% interval
+    covered only ~40% of gauge observations, which is overconfidence. We find the
+    factor k that restores 80% coverage on the training season's gauge-days (never
+    used to fit the model) and evaluate it on the held-out season. The same factor
+    applies to panchayat (T3) output, which sits between grid and point scale, so
+    point scale is the conservative reference.
+    """
+    data = gauge_datasets(region_key, predictor, years)
+    calib = {}
+    grid_k = np.round(np.arange(1.0, 10.01, 0.05), 2)
+    for key, (rows, feats) in data.items():
+        pred = predictor.predict_variable(key, feats, Tier.T2, apply_scale_calibration=False)
+        y = rows["value"].to_numpy(dtype=float)
+        m, lo, hi = pred["median"], pred["lower"], pred["upper"]
+        k_best = float(grid_k[-1])
+        for k in grid_k:
+            lo_k, hi_k = m - k * (m - lo), m + k * (hi - m)
+            if VARIABLES[key].reconcile == "multiplicative":
+                lo_k = np.maximum(lo_k, 0.0)
+            if np.mean((y >= lo_k) & (y <= hi_k)) >= 0.80:
+                k_best = float(k)
+                break
+        calib[key] = {
+            "factor": k_best,
+            "n": len(rows),
+            "n_gauges": int(rows["station_id"].nunique()),
+            "years": sorted(years),
+        }
+        console.print(
+            f"  point-scale calibration {key}: k={k_best:.2f} "
+            f"({len(rows)} gauge-days, {calib[key]['n_gauges']} gauges, {sorted(years)})"
+        )
+    return calib
+
+
+def evaluate_t2(region_key: str, predictor: Predictor, years: set[int]) -> dict:
+    data = gauge_datasets(region_key, predictor, years)
+    results = {}
+    for key, (rows, feats) in data.items():
         pred = predictor.predict_variable(key, feats, Tier.T2)
         y = rows["value"].to_numpy(dtype=float)
         bv = rows["block_value"].to_numpy(dtype=float)
         extra = {}
         if key in _TEMPERATURE_VARS:
             extra["B2_lapse_rate"] = lapse_rate_correction(bv, feats["elevation_anomaly_m"])
-        results[key] = _variable_report(
-            key, y, pred, bv, rows["station_id"].to_numpy(), extra
-        )
+        results[key] = _variable_report(key, y, pred, bv, rows["station_id"].to_numpy(), extra)
         console.print(
             f"  T2 {key}: skill vs naive {results[key]['skill_vs_naive']:+.3f} "
             f"(n={results[key]['n']:,} gauge-days at {results[key]['n_clusters']} gauges, "
@@ -399,12 +453,24 @@ def write_markdown(report: dict, path) -> None:
 def run(
     region: str = typer.Option("mh_ghats"),
     model_region: str = typer.Option("", help="Region whose models to use (transfer test)"),
-    all_seasons_t2: bool = typer.Option(False, help="Use every season at gauges, not just the test season"),
+    recalibrate: bool = typer.Option(True, help="Refit the point-scale interval factor"),
 ) -> None:
     if region not in REGIONS:
         raise typer.BadParameter(f"unknown region {region!r}")
     model_region = model_region or region
     transfer = model_region != region
+
+    test_years = set(TRAINING_WINDOW.test_years)
+    calib_years = {int(s[0][:4]) for s in TRAINING_WINDOW.seasons} - test_years
+    calib_path = ARTIFACT_DIR / model_region / "scale_calibration.json"
+
+    # Calibration is fitted only on the model's own region, on seasons outside the
+    # test set, so the held-out evaluation below stays out-of-sample.
+    if not transfer and recalibrate and calib_years:
+        console.print(f"[bold]Calibrating point-scale intervals[/bold] on {sorted(calib_years)}")
+        raw = Predictor.load(region, model_region_key=model_region)
+        calib = calibrate_point_scale(region, raw, calib_years)
+        calib_path.write_text(json.dumps(calib, indent=2), encoding="utf-8")
 
     predictor = Predictor.load(region, model_region_key=model_region)
     console.print(f"[bold]Evaluating {region}[/bold] with models from {model_region}")
@@ -414,8 +480,9 @@ def run(
         "model_region": model_region,
         "transfer": transfer,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "scale_calibration": predictor.scale_calibration,
         "T1": evaluate_t1(region, predictor, transfer),
-        "T2": evaluate_t2(region, predictor, test_only=not all_seasons_t2),
+        "T2": evaluate_t2(region, predictor, test_years),
     }
 
     stem = f"evaluation_{region}" + (f"_from_{model_region}" if transfer else "")

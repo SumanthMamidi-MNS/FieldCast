@@ -16,6 +16,7 @@ grid points inside the block, never from the target points themselves. That keep
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 import numpy as np
@@ -95,8 +96,12 @@ class Predictor:
         models: dict[str, VariableDownscaler],
         support: SupportModel | None,
         grid: pd.DataFrame,
+        scale_calibration: dict | None = None,
     ):
         self.region_key = region_key
+        # Per-variable interval factor fitted at gauges (see
+        # evaluate.run.calibrate_point_scale). Applied below the grid scale only.
+        self.scale_calibration = scale_calibration or {}
         self.models = models
         self.support = support
         self.grid = grid
@@ -136,7 +141,9 @@ class Predictor:
                 columns=list(data["columns"]),
                 gauge_coords=gauges,
             )
-        return cls(region_key, models, support, grid)
+        calib_path = root / "scale_calibration.json"
+        calib = json.loads(calib_path.read_text(encoding="utf-8")) if calib_path.exists() else None
+        return cls(region_key, models, support, grid, calib)
 
     def predict_variable(
         self,
@@ -145,6 +152,7 @@ class Predictor:
         tier: Tier,
         weights: np.ndarray | None = None,
         reconcile_to: float | None = None,
+        apply_scale_calibration: bool = True,
     ) -> dict:
         """Quantiles (optionally reconciled), occurrence, and support for one variable.
 
@@ -173,8 +181,20 @@ class Predictor:
             gauge_km = np.full(len(features), np.inf)
 
         lo_q, hi_q = min(QUANTILES), max(QUANTILES)
-        lower, upper = inflate_interval(quantiles[lo_q], quantiles[0.5], quantiles[hi_q], score, tier)
         median = quantiles[0.5]
+        calib = self.scale_calibration.get(key) if apply_scale_calibration else None
+        if calib is not None and tier is not Tier.T1:
+            # A measured point-scale factor replaces the fixed T3 guess: widen as
+            # at T2, then by the factor that restored 80% coverage at gauges.
+            lower, upper = inflate_interval(
+                quantiles[lo_q], median, quantiles[hi_q], score, Tier.T2
+            )
+            k = float(calib["factor"])
+            lower, upper = median - k * (median - lower), median + k * (upper - median)
+        else:
+            lower, upper = inflate_interval(
+                quantiles[lo_q], median, quantiles[hi_q], score, tier
+            )
         if var.reconcile == "multiplicative":
             lower, median, upper = clamp_non_negative(lower, median, upper)
 

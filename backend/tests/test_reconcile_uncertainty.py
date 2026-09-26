@@ -302,3 +302,20 @@ def test_t3_inflates_more_than_t2_at_equal_support():
     _, t2_up = inflate_interval(lo, md, up, np.array([0.5]), Tier.T2)
     _, t3_up = inflate_interval(lo, md, up, np.array([0.5]), Tier.T3)
     assert t3_up[0] > t2_up[0]
+
+
+def test_typical_training_terrain_is_well_supported_in_high_dimensions():
+    """Regression: a fixed 3-sigma cap scored the training data itself as ~0.3.
+
+    In 7-D a typical point sits ~2.6 sigma from the centre, so support must be
+    scaled by dimension or every panchayat gets labelled 'low'.
+    """
+    from backend.pipeline.models.uncertainty import covariate_support
+
+    rng = np.random.default_rng(7)
+    feats = rng.normal(0.0, 1.0, (2000, 7))
+    model = SupportModel.fit(feats, [f"f{i}" for i in range(7)])
+    cov = covariate_support(model.mahalanobis(feats), 7)
+    assert np.median(cov) > 0.9
+    far = covariate_support(model.mahalanobis(np.full((1, 7), 6.0)), 7)
+    assert far[0] < 0.01
