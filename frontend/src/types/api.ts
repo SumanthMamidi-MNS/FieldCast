@@ -78,7 +78,20 @@ export interface VariableForecast {
    * still differ by panchayat). Backend default is `"model"`.
    */
   value_source: 'model' | 'block'
+
+  /**
+   * What `confidence.lower/upper` describe.
+   * `"all_days"`: the likely range of `value` itself (every variable but rain).
+   * `"if_rain"`: rain only. The likely amount on a day it rains (>= 2.5 mm;
+   * `lower` is never below 2.5). It is NOT a range for `value`: the served
+   * amount can sit below it on a low-chance day. Read it together with
+   * `rain_probability`. Optional for older data; absent means `"all_days"`.
+   */
+  range_basis?: RangeBasis
 }
+
+/** schemas.RangeBasis */
+export type RangeBasis = 'all_days' | 'if_rain'
 
 /** schemas.AdvisoryItem */
 export interface AdvisoryItem {

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { PanchayatForecast } from '../../types/api'
 import { formatLongDate } from '../../lib/dates'
 import { formatArea, formatElevation } from '../../lib/format'
+import { rangeBasisOf } from '../../lib/intervalBand'
 import { VARIABLE_ORDER } from '../../lib/variables'
 import { Logo } from '../brand/Logo'
 import { Icon } from '../common/Icon'
@@ -34,6 +35,8 @@ export function VillageDetail({ village, district, sourceLabel, onBack }: Villag
   )
   const confidence = (village.variables.precip ?? variables[0])?.confidence
   const isGramPanchayat = village.unit_type === 'gram_panchayat'
+  // Rain's range may be "if it rains", which must never be called a likely range.
+  const hasIfRain = variables.some((v) => rangeBasisOf(v) === 'if_rain')
 
   return (
     <article className="village print-area" aria-labelledby="village-title">
@@ -98,7 +101,8 @@ export function VillageDetail({ village, district, sourceLabel, onBack }: Villag
         </h3>
         <p className="muted small band-key">
           <span>
-            <span className="band-key-range" aria-hidden /> likely range (8 days in 10)
+            <span className="band-key-range" aria-hidden />{' '}
+            {hasIfRain ? 'range, 8 days in 10 (rain: amount if it rains)' : 'likely range (8 days in 10)'}
           </span>
           <span>
             <span className="band-key-dot" aria-hidden /> this panchayat

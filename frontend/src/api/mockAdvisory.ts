@@ -217,7 +217,14 @@ function diseaseAdvice(v: Vars): AdvisoryItem | null {
 function heavyRainItem(v: Vars): AdvisoryItem | null {
   const rain = v.precip
   if (!rain) return null
-  const mm = rain.confidence.upper // warn on the plausible high end, not the median
+  // Warn on the plausible high end, not the median. An "if it rains" range is
+  // conditional on rain, so weight its upper end by the chance of rain (a rough
+  // stand-in for the backend's panchayat-scale estimate); otherwise it would
+  // fire on every light day.
+  const mm =
+    rain.range_basis === 'if_rain'
+      ? Math.max(rain.value, (rain.rain_probability ?? 0) * rain.confidence.upper)
+      : rain.confidence.upper
   if (mm >= THRESHOLDS.veryHeavyRainMm) {
     return item(
       'Heavy rainfall preparedness',
@@ -280,7 +287,11 @@ function uncertaintyStatement(v: Vars, support: SupportLevel): string {
   }
 
   let text = base[support]
-  if (rain) {
+  if (rain && rain.range_basis === 'if_rain') {
+    text += ` If it rains, the amount is likely between ${f(rain.confidence.lower)} and ${f(
+      rain.confidence.upper,
+    )} mm.`
+  } else if (rain) {
     text += ` Rainfall could plausibly fall anywhere between ${f(rain.confidence.lower)} and ${f(
       rain.confidence.upper,
     )} mm.`

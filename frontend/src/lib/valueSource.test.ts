@@ -144,6 +144,8 @@ describe('wording', () => {
     expect(blockValueNote(true)).toContain('The range and rain chance are panchayat-specific.')
     expect(blockValueNote(false)).toContain('The range is panchayat-specific.')
     expect(blockValueNote(false)).toMatch(/^Official block value: /)
+    expect(blockValueNote(true, true)).toContain('The if-it-rains range and rain chance are panchayat-specific.')
+    expect(blockValueNote(true, true)).not.toMatch(/likely range/i)
   })
 
   it('explains a block-served evidence row with both scores', () => {

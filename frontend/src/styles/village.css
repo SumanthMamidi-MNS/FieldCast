@@ -261,6 +261,50 @@
   color: var(--text-3);
 }
 
+/* Rain read as two linked statements: the chance, then the amount if it rains. */
+.rain-statements {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: 4px;
+  padding-top: var(--sp-2);
+  border-top: 1px dashed var(--border);
+}
+
+.rain-stmt {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* The second statement hangs off the first: it only applies on a rainy day. */
+.rain-stmt-amount {
+  padding-left: var(--sp-2);
+  border-left: 2px solid var(--brand-200);
+}
+
+.rain-if-text {
+  font-size: var(--fs-md);
+  color: var(--text-2);
+  line-height: 1.35;
+}
+
+.rain-if-text strong {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+
+.rain-if-range {
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.rain-if-cov {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
 /* Interval band: range, village dot, block tick on one axis. */
 .band {
   position: relative;

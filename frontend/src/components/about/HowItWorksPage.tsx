@@ -142,7 +142,8 @@ export function HowItWorksPage() {
         <div className="prose">
           <p>
             Every number comes with a likely range that should hold the truth on 8 days in 10, and a
-            confidence level. Confidence is lower where the panchayat&rsquo;s terrain is unlike anywhere
+            confidence level. Rain is the exception: its range is the amount on a day it rains, read
+            together with the chance of rain. Confidence is lower where the panchayat&rsquo;s terrain is unlike anywhere
             the model learned from, or where no rain gauge is nearby. Low confidence widens the range
             and makes the advice more cautious: spraying, fertiliser and harvest move from
             &ldquo;go ahead&rdquo; to &ldquo;take care&rdquo;, never the other way.

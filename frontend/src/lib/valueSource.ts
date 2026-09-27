@@ -135,10 +135,11 @@ export function spreadMode(panchayats: PanchayatForecast[], key: VariableKey): S
 }
 
 /** The quiet note shown wherever a block-sourced value appears. */
-export function blockValueNote(hasRainChance: boolean): string {
+export function blockValueNote(hasRainChance: boolean, ifRain = false): string {
+  const range = ifRain ? 'The if-it-rains range' : 'The range'
   return (
     "Official block value: FieldCast's panchayat estimate did not beat it in testing, so the block " +
-    `forecast is shown. ${hasRainChance ? 'The range and rain chance are' : 'The range is'} panchayat-specific.`
+    `forecast is shown. ${hasRainChance ? `${range} and rain chance are` : `${range} is`} panchayat-specific.`
   )
 }
 

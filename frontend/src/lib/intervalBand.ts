@@ -18,6 +18,8 @@
  *   block-mean reconciliation) must not draw outside the box.
  */
 
+import type { RangeBasis } from '../types/api'
+
 export interface BandInput {
   /** 10th percentile. */
   lower: number
@@ -146,4 +148,80 @@ export function refinementSignal(input: {
   const shift = Math.abs(input.value - input.blockValue)
   if (!Number.isFinite(half) || half < 1e-9) return shift > 1e-9 ? Infinity : 0
   return shift / half
+}
+
+// ---------------------------------------------------------------------------
+// Range basis: what the band means
+// ---------------------------------------------------------------------------
+
+/**
+ * What a variable's `confidence.lower/upper` describe.
+ *
+ * - `all_days`: the likely range of the served value (every variable but rain).
+ * - `if_rain`: rain only. The likely amount on a day it rains (2.5 mm or more).
+ *   It is not a range for the served value, which is the block amount and can
+ *   sit below it on a low-chance day. So the band then carries no value dot,
+ *   and nothing may say the block amount is inside or outside a "likely range".
+ */
+export type { RangeBasis }
+
+/** The basis of a forecast's range; absent (older data) means `all_days`. */
+export function rangeBasisOf(v: { range_basis?: RangeBasis | null } | null | undefined): RangeBasis {
+  return v?.range_basis === 'if_rain' ? 'if_rain' : 'all_days'
+}
+
+export interface BasisBand extends BandGeometry {
+  /**
+   * Whether to draw the value dot. False for `if_rain`: the served amount is
+   * not a draw from the if-it-rains range, so placing it on the band would
+   * read as "inside" or "outside" a range it was never part of.
+   */
+  showValue: boolean
+}
+
+/**
+ * Band geometry for either basis. For `if_rain` the scale spans only the
+ * if-it-rains range and the block amount (the reference tick); the served
+ * value is left off the axis.
+ */
+export function computeBasisBand(input: BandInput & { basis: RangeBasis }): BasisBand {
+  const { basis, ...band } = input
+  if (basis === 'if_rain') {
+    const g = computeBand({ ...band, value: band.blockValue })
+    return { ...g, valueX: g.blockX, valuePct: g.blockPct, valueClamped: false, showValue: false }
+  }
+  return { ...computeBand(band), showValue: true }
+}
+
+export interface RangeWording {
+  /** Short range line under the band, e.g. "Likely 20–24" or "If it rains 2.5–25 mm". */
+  foot: string
+  /** Legend text for the shaded band. */
+  key: string
+  /** Screen-reader clause describing the range (no trailing full stop). */
+  spoken: string
+}
+
+/**
+ * How the range is worded. Rain's `if_rain` range is never called a "likely
+ * range": it is the amount on a day it rains.
+ */
+export function rangeWording(
+  basis: RangeBasis,
+  lowerText: string,
+  upperText: string,
+  unit: string,
+): RangeWording {
+  if (basis === 'if_rain') {
+    return {
+      foot: `If it rains ${lowerText}–${upperText} ${unit}`,
+      key: 'amount if it rains (8 days in 10)',
+      spoken: `If it rains, about ${lowerText} to ${upperText} ${unit}, on 8 rainy days in 10`,
+    }
+  }
+  return {
+    foot: `Likely ${lowerText}–${upperText}`,
+    key: 'likely range (8 days in 10)',
+    spoken: `likely between ${lowerText} and ${upperText} ${unit}`,
+  }
 }

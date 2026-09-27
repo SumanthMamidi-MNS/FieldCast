@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { MIN_BAND_PX, computeBand, refinementSignal } from './intervalBand'
+import {
+  MIN_BAND_PX,
+  computeBand,
+  computeBasisBand,
+  rangeBasisOf,
+  rangeWording,
+  refinementSignal,
+} from './intervalBand'
 
 const W = 300
 
@@ -123,5 +130,109 @@ describe('refinementSignal', () => {
   it('treats a shift with no interval as an unbounded signal, not a crash', () => {
     expect(refinementSignal({ value: 30, blockValue: 24, lower: 7, upper: 7 })).toBe(Infinity)
     expect(refinementSignal({ value: 24, blockValue: 24, lower: 7, upper: 7 })).toBe(0)
+  })
+})
+
+describe('rangeBasisOf', () => {
+  it('defaults to all_days for older data without the field', () => {
+    expect(rangeBasisOf({})).toBe('all_days')
+    expect(rangeBasisOf({ range_basis: null })).toBe('all_days')
+    expect(rangeBasisOf(null)).toBe('all_days')
+    expect(rangeBasisOf(undefined)).toBe('all_days')
+  })
+
+  it('reads both bases', () => {
+    expect(rangeBasisOf({ range_basis: 'all_days' })).toBe('all_days')
+    expect(rangeBasisOf({ range_basis: 'if_rain' })).toBe('if_rain')
+  })
+})
+
+describe('computeBasisBand', () => {
+  it('matches computeBand exactly for all_days and shows the value dot', () => {
+    const input = { lower: 40, upper: 78, value: 58, blockValue: 24, width: W }
+    const g = computeBasisBand({ ...input, basis: 'all_days' })
+    const { showValue, ...geometry } = g
+    expect(showValue).toBe(true)
+    expect(geometry).toEqual(computeBand(input))
+  })
+
+  it('draws the if-it-rains range with the block amount as a reference only', () => {
+    // A light day: block amount 1.9 mm, if-it-rains range 2.5–25 mm.
+    const g = computeBasisBand({
+      basis: 'if_rain',
+      lower: 2.5,
+      upper: 25,
+      value: 1.9,
+      blockValue: 1.9,
+      width: W,
+      floor: 0,
+    })
+    expect(g.showValue).toBe(false)
+    expect(g.valueClamped).toBe(false)
+    expect(g.scaleMin).toBeGreaterThanOrEqual(0)
+    expect(g.scaleMin).toBeLessThanOrEqual(1.9)
+    expect(g.scaleMax).toBeGreaterThanOrEqual(25)
+    // The block tick stays on the drawn scale, below the band on a light day.
+    expect(g.blockX).toBeGreaterThanOrEqual(0)
+    expect(g.blockX).toBeLessThan(g.bandStart)
+  })
+
+  it('leaves a model value that differs from the block off the if_rain scale', () => {
+    const withFar = computeBasisBand({
+      basis: 'if_rain',
+      lower: 10,
+      upper: 60,
+      value: 400,
+      blockValue: 30,
+      width: W,
+      floor: 0,
+    })
+    const withBlock = computeBasisBand({
+      basis: 'if_rain',
+      lower: 10,
+      upper: 60,
+      value: 30,
+      blockValue: 30,
+      width: W,
+      floor: 0,
+    })
+    expect(withFar.scaleMax).toBe(withBlock.scaleMax)
+    expect(withFar.bandStart).toBe(withBlock.bandStart)
+    expect(withFar.showValue).toBe(false)
+  })
+
+  it('keeps a heavy-day block amount inside the drawing', () => {
+    const g = computeBasisBand({
+      basis: 'if_rain',
+      lower: 18,
+      upper: 140,
+      value: 96,
+      blockValue: 96,
+      width: W,
+      floor: 0,
+    })
+    expect(g.blockX).toBeGreaterThanOrEqual(g.bandStart)
+    expect(g.blockX).toBeLessThanOrEqual(g.bandStart + g.bandWidth)
+    expect(g.bandStart + g.bandWidth).toBeLessThanOrEqual(W)
+  })
+})
+
+describe('rangeWording', () => {
+  it('keeps the all_days wording unchanged', () => {
+    const w = rangeWording('all_days', '20', '24', '°C')
+    expect(w.foot).toBe('Likely 20–24')
+    expect(w.key).toBe('likely range (8 days in 10)')
+    expect(w.spoken).toBe('likely between 20 and 24 °C')
+  })
+
+  it('words rain as "if it rains" and never as a likely range', () => {
+    const w = rangeWording('if_rain', '2.5', '25', 'mm')
+    expect(w.foot).toBe('If it rains 2.5–25 mm')
+    expect(w.key).toContain('if it rains')
+    expect(w.spoken).toBe('If it rains, about 2.5 to 25 mm, on 8 rainy days in 10')
+    for (const text of [w.foot, w.key, w.spoken]) {
+      expect(text).not.toMatch(/likely range/i)
+      expect(text).not.toMatch(/likely between/i)
+    }
   })
 })

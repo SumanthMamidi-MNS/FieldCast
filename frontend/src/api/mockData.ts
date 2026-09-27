@@ -465,6 +465,8 @@ function makeVariable(args: {
     rain_probability:
       args.rainProbability === undefined ? null : round(clamp01(args.rainProbability), 2),
     value_source: fromBlock ? 'block' : 'model',
+    // Rain's range is the amount on a day it rains (>= 2.5 mm), like the backend.
+    range_basis: args.variable === 'precip' ? 'if_rain' : 'all_days',
   }
 }
 
@@ -558,20 +560,25 @@ export function buildForecast(
     const rh = humidity[i] as number
     const ws = wind[i] as number
 
+    // Rain's range is "if it rains": the likely amount on a rainy day, so it is
+    // built from the mean wet-day amount, and never starts below 2.5 mm.
+    // Asymmetric on purpose: wet-day amounts are right-skewed.
+    const rp = rainProb[i] as number
+    const wetDay = p / Math.max(0.15, rp)
+    const wetLower = Math.max(2.5, wetDay * 0.3)
+    const wetUpper = Math.max(wetLower + 4, wetDay * (1.6 + 0.5 * w) + 2)
+
     const variables: Record<string, VariableForecast> = {
-      // Rainfall's interval is asymmetric on purpose: the predictive
-      // distribution for precipitation is right-skewed, and a symmetric band
-      // would understate the chance of a damaging downpour.
       precip: makeVariable({
         variable: 'precip',
         label: 'Rainfall',
         unit: 'mm',
         value: p,
         blockValue: blockPrecip,
-        lower: Math.max(0, p - p * 0.55 * w),
-        upper: p + p * 0.92 * w + 1.5,
+        lower: wetLower,
+        upper: wetUpper,
         unitRef: u,
-        rainProbability: rainProb[i] as number,
+        rainProbability: rp,
       }),
       tmax: makeVariable({
         variable: 'tmax',
