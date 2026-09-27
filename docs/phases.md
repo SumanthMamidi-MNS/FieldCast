@@ -23,12 +23,15 @@ the input to Round 2.
 - [x] Real gram panchayats from LGD when the export is present (code + tests)
 - [x] LGD exports received: 8,072 (MH) and 1,730 (KA) real gram panchayats, 94% / 96% of villages matched
 - [~] Weather history fetch, value-ordered (test → recent → 1958/1960 gauges → 2019-20); resumes itself
-      - [x] test seasons both states; MH 2022 monsoon + 2021-22 dry season
-      - [ ] MH 2021 monsoon; KA 2022, 2021-22 dry, 2021; historical 1958/1960; 2019-20 monsoons
-- [~] Retrain MH with new features and seasons (interim done: 2022 monsoon + 2021-22 dry season)
-- [ ] Train KA's own model
-- [ ] Re-run evaluations: T1, T2 modern, T2 historical (~100 gauges), MH→KA transfer
-- [~] Re-export serving bundles (MH interim exported with real gram panchayats); README results
+      - [x] test seasons both states; 2022 + 2021 monsoons and 2021-22 dry season, both states; MH 1958
+      - [ ] MH 1960; KA 1958 and 1960 (paused by the Open-Meteo daily quota); 2019-20 monsoons
+- [x] Retrain MH with new features and seasons (2021-22 monsoons + 2021-22 dry season)
+- [x] Train KA's own model
+- [x] Serving policy: a variable that loses to the block value on validation serves the block value
+- [x] Rain as a chance + if-it-rains range (wet-day calibrated: 0.80 MH / 0.81 KA coverage); area-scale heavy-rain warnings
+- [x] Evaluations: T1, T2 modern, MH→KA transfer
+- [ ] T2 historical (~100 gauges, recalibrate on 1958, test on 1960)
+- [x] Export serving bundles (MH + KA, real gram panchayats); README results
 
 ### B. Frontend
 - [x] FieldCast brand (name, logo, favicon, tokens), app shell, control bar
@@ -46,10 +49,18 @@ the input to Round 2.
 - [x] Verified in a clean runtime-only environment: 57 ms cold / 13 ms warm per forecast
 - [ ] First deployment (owner's Vercel account)
 
+### D. Release
+- [x] docs/frontend.md and docs/backend.md knowledge docs
+- [x] .gitignore, MIT licence, full README with badges, results and flowchart
+- [x] Project flowchart (docs/flowchart/, HTML source + PNG)
+- [x] New logo and two-tone wordmark
+- [x] History scrubbed of local AI setup files; pushed to GitHub as main
+- [ ] LinkedIn post and GitHub About text (after the 1960 gauge results)
+
 ---
 
 ## Next up
-1. KA recent seasons land → train KA, evaluate KA and the MH→KA transfer, export KA.
-2. Historical gauge seasons land → recalibrate intervals on 1958, ~100-gauge test on 1960.
-3. Final retrain on all seasons, export, README results.
-4. Owner: first Vercel deployment.
+1. Quota resets → MH 1960, KA 1958/1960 land → recalibrate on 1958, ~100-gauge test on 1960,
+   re-export, update README + flowchart numbers, push a follow-up commit.
+2. LinkedIn post and About text with the final numbers.
+3. Owner: first Vercel deployment.
