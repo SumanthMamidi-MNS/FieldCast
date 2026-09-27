@@ -1,44 +1,49 @@
 <p align="center">
-  <img src="docs/logo.svg" alt="FieldCast" width="360" />
+  <img src="docs/assets/fieldcast-logo.svg" alt="FieldCast" height="88">
 </p>
-
-<h3 align="center">Village-level weather, with honest confidence.</h3>
+<h3 align="center">
+  <strong>Village-Level Weather Downscaling &bull; Honest Confidence</strong><br>
+  <small>Hyperlocal Orographic Modeling &bull; Gram Panchayat Forecasts &bull; Agro-Meteorology</small>
+</h3>
 
 <p align="center">
-  FieldCast downscales official block-level weather forecasts to every <b>gram panchayat</b>,<br />
-  so agro-met advice can follow the terrain, and says how far to trust every number.
-</p>
-
-<p align="center">
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
-  <img alt="LightGBM" src="https://img.shields.io/badge/LightGBM-2E7D32?style=for-the-badge" />
-  <img alt="scikit-learn" src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white" />
-  <img alt="NumPy" src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white" />
-  <img alt="pandas" src="https://img.shields.io/badge/pandas-150458?style=for-the-badge&logo=pandas&logoColor=white" />
-  <img alt="GeoPandas" src="https://img.shields.io/badge/GeoPandas-139C5A?style=for-the-badge" />
-  <br />
-  <img alt="React" src="https://img.shields.io/badge/React-18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
-  <img alt="Vite" src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
-  <img alt="MapLibre GL" src="https://img.shields.io/badge/MapLibre_GL-396CB2?style=for-the-badge&logo=maplibre&logoColor=white" />
-  <img alt="OpenStreetMap" src="https://img.shields.io/badge/OpenStreetMap-7EBC6F?style=for-the-badge&logo=openstreetmap&logoColor=white" />
-  <img alt="Vercel" src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" />
-  <br />
-  <img alt="pytest" src="https://img.shields.io/badge/pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white" />
-  <img alt="Vitest" src="https://img.shields.io/badge/Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white" />
-  <img alt="Ruff" src="https://img.shields.io/badge/Ruff-D7FF64?style=for-the-badge&logo=ruff&logoColor=black" />
-  <img alt="ESLint" src="https://img.shields.io/badge/ESLint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-408_passing-047857?style=for-the-badge" />
-  <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-0A3B34?style=for-the-badge" />
+  <a href="https://www.python.org/"><img src="docs/assets/badges/python.svg" alt="Python 3.12" height="30"></a>
+  <a href="https://fastapi.tiangolo.com"><img src="docs/assets/badges/fastapi.svg" alt="FastAPI REST" height="30"></a>
+  <a href="docs/backend.md#modelling"><img src="docs/assets/badges/downscale.svg" alt="Downscaling: LightGBM" height="30"></a>
+  <a href="docs/architecture.md"><img src="docs/assets/badges/orography.svg" alt="Orographic: 245-deg Rain Shadow" height="30"></a>
+  <a href="docs/backend.md#geographic-coverage"><img src="docs/assets/badges/coverage.svg" alt="Coverage: 9,802 Panchayats" height="30"></a>
+  <a href="docs/frontend.md"><img src="docs/assets/badges/console.svg" alt="Dashboard: React + MapLibre" height="30"></a>
+  <a href="docs/decisions.md#numpy-only-serving"><img src="docs/assets/badges/offline.svg" alt="Engine: NumPy ~100ms" height="30"></a>
+  <a href="backend/tests/"><img src="docs/assets/badges/tests.svg" alt="408 Passing" height="30"></a>
+  <a href="LICENSE"><img src="docs/assets/badges/license.svg" alt="MIT License" height="30"></a>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/forecast-map.jpg" alt="FieldCast dashboard: maximum temperature across the 257 gram panchayats of Patan block" width="100%" />
-  <sub>Patan block, 257 gram panchayats. Colour is the difference from the block forecast; hatching marks where confidence is low.</sub>
+  FieldCast downscales official block-level weather forecasts to every <strong>gram panchayat</strong>,<br>
+  delivering terrain-aware agro-met advice with honest prediction confidence.
 </p>
 
-> Built for **Smart India Hackathon**, problem statement **SIH26074** (Ministry of Earth Sciences, theme: Disaster Management): *Downscaling of weather forecast from Block level to Panchayat level for agro-meteorological advisory services.*
+<p align="center"><img src="docs/assets/divider.svg" width="100%" height="1" alt=""></p>
+
+<details open>
+<summary><strong>Table of Contents</strong></summary>
+
+1. [Why it matters](#why-it-matters)
+2. [What it does](#what-it-does)
+3. [The dashboard](#the-dashboard)
+4. [How it works](#how-it-works)
+5. [Why it works](#why-it-works)
+6. [Results](#results)
+7. [Tech stack](#tech-stack)
+8. [Getting started](#getting-started)
+9. [Limitations](#limitations)
+10. [Data sources](#data-sources)
+11. [Acknowledgements](#acknowledgements)
+12. [License](#license)
+
+</details>
+
+<p align="center"><img src="docs/assets/divider.svg" width="100%" height="1" alt=""></p>
 
 ## Why it matters
 
@@ -69,10 +74,36 @@ the panchayat value **and** how far to trust it.
 - **Accepts the officer's IMD bulletin.** An officer can type the official block
   forecast and get it downscaled instantly.
 
+## The dashboard
+
+<p align="center">
+  <a href="docs/screenshots/forecast-map.jpg"><img src="docs/screenshots/forecast-map.jpg" alt="FieldCast dashboard: maximum temperature across the 257 gram panchayats of Patan block" width="100%"></a>
+  <br>
+  <sub>Patan block, 257 gram panchayats. Colour is the difference from the block forecast; hatching marks where confidence is low.</sub>
+</p>
+
+Built for a block agriculture officer on a laptop or a phone:
+- **Advice comes first**, in plain words: ✓ go ahead · ⚠ take care · ⛔ hold off.
+- **Colour shows the value and texture shows confidence**, so the two can never
+  be confused.
+- **Each panchayat has weather cards and a "How sure are we?" panel.** Every
+  value has its range and the block value marked.
+- **Officers can print a one-page advisory** for a panchayat noticeboard.
+- **Past seasons can be replayed**, and live forecasts run from yesterday to
+  +15 days.
+- **It's accessible.** Keyboard accessible, colour-blind-safe palettes, and a
+  mobile layout.
+
+<p align="center">
+  <a href="docs/screenshots/panchayat-advice.jpg"><img src="docs/screenshots/panchayat-advice.jpg" alt="A gram panchayat's advice: hold off on spraying, irrigation and harvest, with confidence caveats" width="100%"></a>
+  <br>
+  <sub>A gram panchayat's advice: hold off on spraying, irrigation and harvest, with confidence caveats.</sub>
+</p>
+
 ## How it works
 
 <p align="center">
-  <img src="docs/flowchart/fieldcast-flowchart.png" alt="FieldCast flowchart: from one block forecast to gram-panchayat advice" width="82%" />
+  <a href="docs/flowchart/fieldcast-flowchart.png"><img src="docs/flowchart/fieldcast-flowchart.png" alt="FieldCast flowchart: from one block forecast to gram-panchayat advice" width="100%"></a>
 </p>
 
 1. **Input.** Take the official block forecast: an IMD bulletin, a live
@@ -94,8 +125,8 @@ the panchayat value **and** how far to trust it.
 | Design choice | Why |
 |---|---|
 | Predict the **anomaly**, not the value | If the model learns nothing, the output is exactly the official forecast |
-| **Rain-shadow features** along the 245° monsoon flow | A village's rain shadow comes from the ridge upwind of it, not its local slope |
-| **Two-stage rainfall** (IMD rainy day ≥ 2.5 mm, then amount) | One regressor smears drizzle everywhere; two stages allow "dry here, wet next door" |
+| **Rain-shadow features** along the 245-deg monsoon flow | A village's rain shadow comes from the ridge upwind of it, not its local slope |
+| **Two-stage rainfall** (IMD rainy day >= 2.5 mm, then amount) | One regressor smears drizzle everywhere; two stages allow "dry here, wet next door" |
 | **Block-mean reconciliation** | Keeps every panchayat map consistent with the official block forecast |
 | **Serving policy decided on validation** | If the model can't beat the block value for a variable, the block value is served |
 | **Epistemic support** (chi-square-scaled Mahalanobis + gauge distance) | Tree models extrapolate with false confidence; unfamiliar terrain widens the range and downgrades advice |
@@ -130,26 +161,8 @@ better. 90% confidence intervals come from cluster bootstraps.
   [`reports/`](reports/).
 
 <p align="center">
-  <img src="docs/screenshots/evidence.jpg" alt="Evidence page: skill against the block forecast with confidence intervals, and the rain loss shown just as plainly" width="100%" />
+  <a href="docs/screenshots/evidence.jpg"><img src="docs/screenshots/evidence.jpg" alt="Evidence page: skill against the block forecast with confidence intervals, and the rain loss shown just as plainly" width="100%"></a>
 </p>
-
-## The dashboard
-
-<p align="center">
-  <img src="docs/screenshots/panchayat-advice.jpg" alt="A gram panchayat's advice: hold off on spraying, irrigation and harvest, with confidence caveats" width="100%" />
-</p>
-
-Built for a block agriculture officer on a laptop or a phone:
-- **Advice comes first**, in plain words: ✓ go ahead · ⚠ take care · ⛔ hold off.
-- **Colour shows the value and texture shows confidence**, so the two can never
-  be confused.
-- **Each panchayat has weather cards and a "How sure are we?" panel.** Every
-  value has its range and the block value marked.
-- **Officers can print a one-page advisory** for a panchayat noticeboard.
-- **Past seasons can be replayed**, and live forecasts run from yesterday to
-  +15 days.
-- **It's accessible.** Keyboard accessible, colour-blind-safe palettes, and a
-  mobile layout.
 
 ## Tech stack
 
@@ -159,7 +172,6 @@ Built for a block agriculture officer on a laptop or a phone:
 | API | FastAPI · pydantic · numpy-only runtime |
 | Dashboard | React 18 · TypeScript (strict) · Vite · MapLibre GL · OpenStreetMap |
 | Quality | 231 pytest + 177 Vitest tests · Ruff · ESLint |
-| Hosting | Vercel |
 
 ## Getting started
 
@@ -178,7 +190,7 @@ cd frontend && npm test && npm run lint    # frontend tests and lint
 ```
 
 <details>
-<summary><b>Rebuild the data and models</b></summary>
+<summary><b>Model pipeline (training & evaluation)</b></summary>
 
 ```bash
 # LGD "Village To Gram Panchayat Mapping" exports go in data/raw/lgd/ first.
@@ -220,15 +232,29 @@ docs/           architecture, design decisions, flowchart
 
 ## Data sources
 
-[Open-Meteo](https://open-meteo.com) (ERA5, forecasts; CC BY 4.0) ·
-[AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) ·
-[Natural Earth](https://www.naturalearthdata.com) ·
-[GADM 4.1](https://gadm.org) ·
-[datameet village boundaries](https://github.com/datameet/indian_village_boundaries) (CC BY 4.0) ·
-[LGD, Government of India](https://lgdirectory.gov.in) ·
-[NOAA GHCN-Daily](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily) ·
-[OpenStreetMap](https://www.openstreetmap.org/copyright) (ODbL)
+| Source | Dataset & Coverage | Role in FieldCast |
+| :--- | :--- | :--- |
+| **[Open-Meteo](https://open-meteo.com)** | ERA5 reanalysis & forecasts (0.25 deg) | Training history & live operational forecasts |
+| **[AWS Terrain](https://registry.opendata.aws/terrain-tiles/)** | Mapzen global elevation DEM (~30 m) | Terrain elevation, slope, aspect & 245-deg ridge heights |
+| **[datameet](https://github.com/datameet/indian_village_boundaries)** | Indian village boundaries (MH & KA) | Spatial geometries for gram panchayats |
+| **[LGD Directory](https://lgdirectory.gov.in)** | Ministry of Panchayati Raj, GoI | Official village-to-panchayat mapping (9,802 GPs) |
+| **[NOAA GHCN-D](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily)** | Ground station daily rain gauges | Quantile calibration & holdout evaluation |
+| **[OpenStreetMap](https://www.openstreetmap.org/copyright)** | OSM GIS vectors (ODbL) | Dashboard basemap cartography & terrain context |
+
+## Acknowledgements
+
+- **Smart India Hackathon** and the **Ministry of Earth Sciences (MoES)** for problem statement **SIH26074** (*Downscaling of weather forecast from Block level to Panchayat level for agro-meteorological advisory services*).
+- **Open-Meteo** and **Copernicus ECMWF** for open hourly ERA5 reanalysis and high-resolution atmospheric data.
+- **AWS Open Data** and the **Mapzen** team for global 30-meter elevation terrain tiles.
+- **DataMeet** for open spatial boundary shapefiles of Indian villages.
 
 ## License
 
-[MIT](LICENSE)
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+
+<p align="center"><img src="docs/assets/divider.svg" width="100%" height="1" alt=""></p>
+
+<p align="center">
+  Designed &amp; Developed by <a href="https://github.com/SumanthMamidi-MNS">Sumanth Mamidi</a><br>
+  <sub>For Smart India Hackathon (SIH26074) &bull; Ministry of Earth Sciences (MoES)</sub>
+</p>
