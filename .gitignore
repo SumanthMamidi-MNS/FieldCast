@@ -55,3 +55,9 @@ reports/*.log
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ---------------------------------------------------------------
+# Local AI-assistant setup (kept locally, not published)
+# ---------------------------------------------------------------
+CLAUDE.md
+.claude/

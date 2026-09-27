@@ -116,11 +116,22 @@ redeploy.
 | `POST /api/blocks/{id}/forecast` | Downscale an **official block forecast you supply** (e.g. an IMD bulletin) |
 | `GET /api/evaluation`, `/api/evaluation/reports` | Skill tables and full evaluation reports |
 
-## Data (all public, no API keys)
+## Data and credits
 
-Open-Meteo (ERA5 reanalysis blend, forecasts) · AWS Terrain Tiles (elevation) ·
-Natural Earth (coastline) · GADM 4.1 (blocks) · datameet (village polygons) ·
-LGD (village → gram panchayat) · NOAA GHCN-Daily (rain gauges).
+All sources are public and need no API key.
+
+| Source | Used for | Licence / terms |
+|---|---|---|
+| [Open-Meteo](https://open-meteo.com) (ERA5 reanalysis, forecasts) | weather history, live forecasts | CC BY 4.0 |
+| [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) | elevation | open data (SRTM and others) |
+| [Natural Earth](https://www.naturalearthdata.com) | coastline | public domain |
+| [GADM 4.1](https://gadm.org) | block boundaries | free for non-commercial use |
+| [datameet](https://github.com/datameet/indian_village_boundaries) | village polygons | CC BY 4.0 |
+| [LGD, Government of India](https://lgdirectory.gov.in) | village → gram panchayat | government open data |
+| [NOAA GHCN-Daily](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily) | rain gauges | public domain |
+| [OpenStreetMap](https://www.openstreetmap.org/copyright) | map background | ODbL |
+
+Code is released under the [MIT licence](LICENSE).
 
 ## Limitations, stated plainly
 
