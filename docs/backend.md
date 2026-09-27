@@ -226,7 +226,7 @@ Mahabaleshwar (crest) no barrier, Satara/Phaltan (lee) a 300-380 m barrier.
 
 ---
 
-## 10. From raw prediction to served value (`finalize.py`)
+## 10. From raw prediction to served value (`finalize.py`, `policy.py`)
 
 1. **Reconcile** to the official block value, area-weighted:
    additive shift for temperature/humidity; multiplicative for wind; for rain,
@@ -237,13 +237,24 @@ Mahabaleshwar (crest) no barrier, Satara/Phaltan (lee) a 300-380 m barrier.
    terrain scores high in 10-D) + 0.4 × gauge proximity (0 beyond 50 km) −
    a tier penalty. Panchayat output (T3) is capped at "moderate".
    Labels: high ≥ 0.70, moderate ≥ 0.40, low below.
-3. **Range**: widen the 10-90% interval around the median by up to 2× for low
-   support, then by the **point-scale factor** fitted at gauges (rain, Tmax,
-   Tmin), so the published 80% range covers ~80% of real gauge readings.
-   Humidity and wind (no gauges) use a fixed ×1.35.
-4. Clamp rain and wind at zero.
-
----
+3. **Range**:
+   - Temperature, humidity, wind: the 10-90% interval around the median, widened
+     by up to 2× for low support, then by the **point-scale factor** fitted at
+     gauges, so the published range covers ~80% of real readings
+     (`range_basis: "all_days"`).
+   - **Rain is two statements**: the calibrated **chance of a rainy day**, and an
+     **amount range if it rains** from the wet-day distribution, starting at
+     2.5 mm and calibrated on wet gauge-days only (`range_basis: "if_rain"`).
+     One combined range had to stretch to cover gauges that got rain on days
+     the model called likely dry (a 1.9 mm day read "0-88 mm").
+4. **Serving policy** (`policy.py`, decided during training on the validation
+   blocks, never the test seasons): if a variable's served estimate does not beat
+   the block value there, the **block value is served as the point estimate**
+   (`value_source: "block"`); the model still supplies the range and, for rain,
+   the chance. Today rain amounts are block-served in both states, so every
+   served number is at least as good as the official forecast.
+5. Clamp rain and wind at zero. The panchayat-scale 90th percentile (before
+   point widening) is kept for area advisories.
 
 ## 11. Advice (`app/services/advisory.py`)
 
@@ -256,7 +267,7 @@ Deterministic rules with named thresholds (tunable by an agronomist):
 | Harvesting | rain chance ≥35% or ≥5 mm | — |
 | Fertiliser | ≥25 mm (washes off) | very little rain (irrigate after) |
 | Fungal disease watch | — | humidity ≥85% at 18-30 °C |
-| Heavy-rain preparedness | upper range ≥115.5 mm | upper range ≥64.5 mm |
+| Heavy-rain preparedness | panchayat-scale 90th percentile ≥115.5 mm | ≥64.5 mm |
 
 **Asymmetric cost**: when support is low, irreversible actions (spraying,
 fertiliser, harvest) are downgraded from *go ahead* to *take care*; a warning is
@@ -281,7 +292,8 @@ statement.
   rain occurrence vs climatology and vs the naive block wet/dry call; **served**
   skill after reconciliation (what the API really returns).
 - **Honesty rules**: no "significant" verdict with fewer than 8 gauges; losses
-  are reported like wins.
+  are reported like wins; block-served variables report skill 0 by design plus
+  the model's own validation and test skill.
 - **Point-scale calibration**: fitted on the 1958 gauge season (fallback: the
   training seasons' modern gauges), written to `scale_calibration.json`, then
   evaluated on separate seasons.
@@ -322,8 +334,10 @@ features, evaluates, finalises, writes advice. Largest block (Patan, 257 units):
 | `GET /api/evaluation`, `/api/evaluation/reports` | skill tables, full reports |
 
 Each panchayat's variable carries `value`, `block_value`, `anomaly`,
+`value_source` (model/block), `range_basis` (all_days/if_rain),
 `confidence {lower, upper, support, support_label, support_score, tier,
-tier_note, nearest_gauge_km}` and, for rain, `rain_probability`. Errors are
+tier_note, nearest_gauge_km}` and, for rain, `rain_probability`. Responses are
+gzip-compressed (the largest block: 1.18 MB → 53 KB). Errors are
 plain sentences: 404 unknown block, 422 unservable date (with the valid dates),
 503 region not served / offline without data.
 
