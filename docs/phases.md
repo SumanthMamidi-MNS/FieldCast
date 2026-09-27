@@ -21,12 +21,14 @@ the input to Round 2.
 - [x] Whole-year seasons (monsoon + dry) with season-based holdouts → no out-of-season penalty
 - [x] Historical gauge test design: ~100 gauges per state in 1958-61 (calibration 1958-59, test 1960-61)
 - [x] Real gram panchayats from LGD when the export is present (code + tests)
-- [ ] **LGD export files** — CAPTCHA-protected; needs a manual download (owner)
-- [~] Weather history fetch: 5 monsoons + 2 dry seasons + 4 historical monsoons, both states
-      (~45k weighted calls ≈ 4-5 days of free quota; `pipeline.fetch` resumes automatically)
-- [ ] Retrain MH with the new features and seasons; train KA's own model
+- [x] LGD exports received: 8,072 (MH) and 1,730 (KA) real gram panchayats, 94% / 96% of villages matched
+- [~] Weather history fetch, value-ordered (test → recent → 1958/1960 gauges → 2019-20); resumes itself
+      - [x] test seasons both states; MH 2022 monsoon + 2021-22 dry season
+      - [ ] MH 2021 monsoon; KA 2022, 2021-22 dry, 2021; historical 1958/1960; 2019-20 monsoons
+- [~] Retrain MH with new features and seasons (interim done: 2022 monsoon + 2021-22 dry season)
+- [ ] Train KA's own model
 - [ ] Re-run evaluations: T1, T2 modern, T2 historical (~100 gauges), MH→KA transfer
-- [ ] Re-export serving bundles (MH + KA); README results
+- [~] Re-export serving bundles (MH interim exported with real gram panchayats); README results
 
 ### B. Frontend
 - [x] FieldCast brand (name, logo, favicon, tokens), app shell, control bar
@@ -34,7 +36,8 @@ the input to Round 2.
 - [x] Block-relative colour scales, collision-free labels, confidence textures
 - [x] Evidence and How it works pages
 - [x] Replay dates from the API, consistent number formatting, wet-day rain scale
-- [x] Verified at 1440, 1280, 820 and 375 px; 135 vitest tests, lint + build clean
+- [x] Verified at 1440, 1280, 820 and 375 px; 149 vitest tests, lint + build clean
+- [x] Forecast page scroll lock (desktop), gram-panchayat terminology, 1960-gauge evidence, 257-unit performance
 
 ### C. Vercel
 - [x] Numpy-only serving runtime + committed serving bundle (parity with LightGBM ~1e-15)
@@ -46,6 +49,7 @@ the input to Round 2.
 ---
 
 ## Next up
-1. When the fetch completes: retrain MH + KA, evaluate, export bundles, commit.
-2. README final results and deployment instructions.
-3. Owner: LGD CSVs → rebuild panchayats → re-export.
+1. KA recent seasons land → train KA, evaluate KA and the MH→KA transfer, export KA.
+2. Historical gauge seasons land → recalibrate intervals on 1958, ~100-gauge test on 1960.
+3. Final retrain on all seasons, export, README results.
+4. Owner: first Vercel deployment.
