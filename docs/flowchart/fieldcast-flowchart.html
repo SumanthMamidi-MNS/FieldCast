@@ -217,8 +217,8 @@
     <div class="stats">
       <div class="stat"><div class="n" data-k="rain">40%</div><div class="d">better rain / no-rain call than the block forecast<small data-k="rain-note">Brier 0.026 vs 0.043 · Maharashtra, held-out seasons</small></div></div>
       <div class="stat"><div class="n" data-k="tmax">+0.44</div><div class="d">max-temperature skill over the block value<small data-k="tmax-note">Maharashtra · +0.42 Karnataka · 1 = perfect, 0 = no better</small></div></div>
-      <div class="stat"><div class="n" data-k="cov">80%</div><div class="d">of real rain-gauge days inside the published range<small data-k="cov-note">target 80% · calibrated and tested on separate seasons</small></div></div>
-      <div class="stat"><div class="n" data-k="gauges">~100</div><div class="d">real rain gauges per state in the historical test<small data-k="gauges-note">1960 monsoon · never used in training</small></div></div>
+      <div class="stat"><div class="n" data-k="cov">80%</div><div class="d">of wet rain-gauge days inside the published range<small data-k="cov-note">target 80% · fitted on training seasons, tested on held-out ones</small></div></div>
+      <div class="stat"><div class="n" data-k="gauges">23%</div><div class="d">better rain / no-rain call at real rain gauges<small data-k="gauges-note">Brier 0.225 vs 0.293 · gauges never used in training · Karnataka 18%</small></div></div>
       <div class="stat"><div class="n">0</div><div class="d">served numbers worse than the official forecast<small>a variable that loses on validation serves the block value</small></div></div>
       <div class="stat"><div class="n">100 ms</div><div class="d">for a 257-panchayat block<small>numpy-only serving · 53 KB gzipped response</small></div></div>
     </div>
