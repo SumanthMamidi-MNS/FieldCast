@@ -193,12 +193,6 @@ function monthYear(year: number, month: number): string {
   return `${MONTHS[month]} ${year}`
 }
 
-/** "2022", or "2022–23" for a season that crosses the new year. */
-function seasonYear(s: Span): string {
-  if (s.y0 === s.y1) return String(s.y0)
-  return `${s.y0}–${String(s.y1).slice(2)}`
-}
-
 /** "2022 & 2023", "2019, 2021 & 2023", or "2019–2023" for an unbroken run of 3+. */
 function joinYears(labels: string[], starts: number[]): string {
   if (labels.length === 1) return labels[0] as string
@@ -227,7 +221,7 @@ const MAX_GROUPS = 3
 
 interface Group {
   months: string
-  /** Null for a window longer than a year, which is written out in full. */
+  /** Null for a window that crosses the new year, which is written out in full. */
   years: { label: string; start: number }[] | null
   first: string
 }
@@ -235,8 +229,8 @@ interface Group {
 /**
  * Replay windows in as few words as possible, always generated from the data:
  *   Jun–Sep 2022 & 2023
- *   Jun–Sep 2022 & 2023, Oct–May 2023–24
- *   Jun 2021–Sep 2023                  (back-to-back seasons merge)
+ *   Jun–Sep 2022 & 2023, Oct 2023–May 2024   (a new-year crossing is written in full)
+ *   Oct 2022–Sep 2023                  (back-to-back seasons merge)
  *   7 seasons, Jun 2015–Sep 2023       (too many groups to list)
  * Months are shown, not days; the steppers know the exact edges.
  * Null when there is no recorded history.
@@ -250,13 +244,14 @@ export function describeReplay(windows: DateWindow[]): string | null {
   const groups: Group[] = []
   for (const w of merged) {
     const s = spanOf(w)
-    const months12 = (s.y1 - s.y0) * 12 + (s.m1 - s.m0) + 1
-    if (months12 > 12) {
+    // A window that crosses the new year is written out in full ("Oct 2022–Sep
+    // 2023"): "Oct–Sep 2022–23" makes the reader do the pairing themselves.
+    if (s.y0 !== s.y1) {
       groups.push({ months: `${monthYear(s.y0, s.m0)}–${monthYear(s.y1, s.m1)}`, years: null, first: w.start })
       continue
     }
-    const months = s.m0 === s.m1 && s.y0 === s.y1 ? (MONTHS[s.m0] as string) : `${MONTHS[s.m0]}–${MONTHS[s.m1]}`
-    const year = { label: seasonYear(s), start: s.y0 }
+    const months = s.m0 === s.m1 ? (MONTHS[s.m0] as string) : `${MONTHS[s.m0]}–${MONTHS[s.m1]}`
+    const year = { label: String(s.y0), start: s.y0 }
     const same = groups.find((g) => g.years !== null && g.months === months)
     if (same?.years) same.years.push(year)
     else groups.push({ months, years: [year], first: w.start })

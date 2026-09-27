@@ -91,6 +91,9 @@ function buildData(
 ) {
   const byId = new Map(forecasts.map((f) => [f.panchayat_id, f]))
   const images: LabelImage[] = []
+  // Focus pills (name + value) show for one panchayat at a time, so they are
+  // drawn on demand (see 'styleimagemissing') rather than 250+ up front.
+  const lazy = new Map<string, LabelImage['build']>()
   const seen = new Set<string>()
   const want = (id: string, build: LabelImage['build']) => {
     if (seen.has(id)) return
@@ -126,7 +129,7 @@ function buildData(
       const valueImage = labelImageId('value', valueText)
       const focusImage = labelImageId('focus', name, valueText)
       want(valueImage, () => buildValueLabel(valueText))
-      want(focusImage, () => buildFocusLabel(name, valueText))
+      lazy.set(focusImage, () => buildFocusLabel(name, valueText))
       const props: LabelProps = {
         id: f.panchayat_id,
         valueImage,
@@ -143,7 +146,7 @@ function buildData(
     }),
   }
 
-  return { polygons, labels, images }
+  return { polygons, labels, images, lazy }
 }
 
 function prefersReducedMotion(): boolean {
@@ -187,6 +190,7 @@ export function MapView({
   const hoveredRef = useRef<string | null>(null)
   const selectedRef = useRef<string | null>(selectedId)
   const geometryRef = useRef(geometry)
+  const lazyImagesRef = useRef<Map<string, LabelImage['build']>>(new Map())
   const paddingRef = useRef(overlayPadding)
   const [ready, setReady] = useState(false)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -403,6 +407,14 @@ export function MapView({
         },
       })
 
+      // Draw a focus label the first time MapLibre asks for it.
+      map.on('styleimagemissing', (e: { id: string }) => {
+        const build = lazyImagesRef.current.get(e.id)
+        if (!build || map.hasImage(e.id)) return
+        const built = build()
+        if (built) map.addImage(e.id, built, { pixelRatio: built.pixelRatio })
+      })
+
       map.on('click', 'panchayat-fill', (e) => {
         const id = e.features?.[0]?.properties?.id
         if (typeof id === 'string') selectRef.current(id)
@@ -447,6 +459,7 @@ export function MapView({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
+    lazyImagesRef.current = data.lazy
     for (const img of data.images) {
       if (map.hasImage(img.id)) continue
       const built = img.build()
@@ -503,7 +516,7 @@ export function MapView({
         ref={containerRef}
         className="map-canvas"
         role="region"
-        aria-label="Village map. Every village is also listed, with the same values, in the panel beside it."
+        aria-label="Gram panchayat map. Every panchayat is also listed, with the same values, in the panel beside it."
       />
       <MapTooltip ref={tooltipRef} forecast={hovered} variableKey={variableKey} scale={scale} />
     </div>

@@ -11,6 +11,7 @@ import {
   formatPercent,
   formatRange,
   formatSupportScore,
+  formatUnitCount,
   formatValue,
   percentOf,
 } from './format'
@@ -112,5 +113,14 @@ describe('other quantities', () => {
   it('fixed groups thousands and uses a true minus', () => {
     expect(fixed(-1234.5, 1)).toBe('−1,234.5')
     expect(fixed(0.1234, 3)).toBe('0.123')
+  })
+})
+
+describe('formatUnitCount', () => {
+  it('counts gram panchayats, singular and plural', () => {
+    expect(formatUnitCount(104)).toBe('104 gram panchayats')
+    expect(formatUnitCount(1)).toBe('1 gram panchayat')
+    expect(formatUnitCount(257, true)).toBe('257 panchayats')
+    expect(formatUnitCount(8072)).toBe('8,072 gram panchayats')
   })
 })

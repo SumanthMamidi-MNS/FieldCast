@@ -142,6 +142,17 @@
   fill: var(--text-2);
 }
 
+/* The rain-shadow measurement: warm accent, so it reads as "what FieldCast measures". */
+.diagram-svg-measure {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--accent-700);
+}
+
+.diagram-caption {
+  max-width: 72ch;
+}
+
 .diagram-villages circle {
   fill: #fff;
   stroke: var(--map-ink);
@@ -245,6 +256,43 @@
 
 .tier-card h3 {
   color: var(--text);
+}
+
+/* --- Gram panchayats served ------------------------------------------------------------------ */
+.unit-stats {
+  width: 100%;
+  max-width: 640px;
+  margin-top: var(--sp-5);
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+
+.unit-stats th,
+.unit-stats td {
+  padding: 10px var(--sp-3) 10px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+
+.unit-stats th:first-child {
+  text-align: left;
+}
+
+.unit-stats thead th {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-3);
+  vertical-align: bottom;
+}
+
+.unit-stats tbody th {
+  font-weight: var(--fw-semibold);
+}
+
+.unit-stats tbody td:nth-child(2) {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--brand-700);
 }
 
 /* --- Sources and limits ------------------------------------------------------------------- */

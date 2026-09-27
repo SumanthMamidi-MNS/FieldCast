@@ -19,7 +19,7 @@ const SUPPORT_SHORT = { high: 'Well supported', medium: 'Moderate', low: 'Low' }
 /**
  * Two keys in one card, because the map carries two channels: colour answers
  * "how much, compared with the block forecast?", texture answers "how sure?".
- * The block value sits on the ramp, and the real lowest and highest villages
+ * The block value sits on the ramp, and the real lowest and highest panchayats
  * are marked, so the scale is never mistaken for the data's range.
  */
 export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: MapLegendProps) {
@@ -38,7 +38,7 @@ export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: Map
     domain.fit === 'range'
       ? {
           lead: `Scale fitted to this block: ${formatRange(domain.min, domain.max, variableKey, unit)}.`,
-          rest: 'Every village is wet, so colour shows how they differ, not total rain.',
+          rest: 'Every panchayat is wet, so colour shows how they differ, not total rain.',
         }
       : domain.fit === 'zero'
         ? { lead: `Scale runs from 0 to ${formatValue(domain.max, variableKey, unit)}.`, rest: '' }
@@ -67,7 +67,7 @@ export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: Map
           role="img"
           aria-label={
             hasData
-              ? `Colour scale. Block forecast ${n(domain.block)} ${unit}. Villages range from ${n(domain.dataMin)} to ${n(domain.dataMax)} ${unit}.${scaleNote ? ` ${scaleNote.lead}` : ''}`
+              ? `Colour scale. Block forecast ${n(domain.block)} ${unit}. Gram panchayats range from ${n(domain.dataMin)} to ${n(domain.dataMax)} ${unit}.${scaleNote ? ` ${scaleNote.lead}` : ''}`
               : `Colour scale centred on the block forecast of ${n(domain.block)} ${unit}.`
           }
         >

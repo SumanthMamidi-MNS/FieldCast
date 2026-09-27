@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { BlockSummary } from '../../types/api'
 import { normalise } from '../../lib/villageList'
+import { formatUnitCount } from '../../lib/format'
 import { Icon } from '../common/Icon'
 
 interface BlockComboboxProps {
@@ -218,7 +219,7 @@ export function BlockCombobox({ blocks, selectedId, onSelect, loading }: BlockCo
                         onClick={() => choose(block)}
                       >
                         <span className="combo-option-name">{block.block_name}</span>
-                        <span className="combo-option-count num">{block.panchayat_count} villages</span>
+                        <span className="combo-option-count num">{formatUnitCount(block.panchayat_count, true)}</span>
                         {isSelected && <Icon name="check" size={16} className="combo-check" />}
                       </li>
                     )

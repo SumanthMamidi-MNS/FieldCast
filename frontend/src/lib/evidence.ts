@@ -129,13 +129,72 @@ export interface SortedReports {
   transfer: [string, EvaluationReport][]
 }
 
-/** Split reports into in-region evaluations and transfer tests. */
+/** New transfer reports are named `evaluation_<region>_from_<model region>`. */
+const TRANSFER_STEM = /_from_[a-z0-9_]+$/i
+
+function isTransfer(key: string, r: EvaluationReport): boolean {
+  return r.transfer === true || TRANSFER_STEM.test(key)
+}
+
+function hasRows(tier: Record<string, EvaluationRow> | undefined): boolean {
+  return !!tier && typeof tier === 'object' && Object.keys(tier).length > 0
+}
+
+/**
+ * Split reports into in-region evaluations and transfer tests.
+ *
+ * Transfer reports are recognised by their `transfer` flag or by the new
+ * `_from_` file name. An older transfer report (e.g. `evaluation_ka_transfer`)
+ * is still shown, unless a new-style report covers the same pair of regions,
+ * in which case the newer one wins rather than the page repeating itself.
+ */
 export function splitReports(reports: EvaluationReports | null): SortedReports {
   const entries = Object.entries(reports ?? {}).filter(
-    ([, r]) => r && typeof r === 'object' && (r.T1 || r.T2),
+    ([, r]) => r && typeof r === 'object' && (hasRows(r.T1) || hasRows(r.T2) || hasRows(r.T2_hist)),
   )
+  const transfer = entries.filter(([k, r]) => isTransfer(k, r))
+  const pair = (r: EvaluationReport) => `${regionName(r.region)}|${regionName(r.model_region)}`
+  const newPairs = new Set(transfer.filter(([k]) => TRANSFER_STEM.test(k)).map(([, r]) => pair(r)))
   return {
-    home: entries.filter(([, r]) => !r.transfer),
-    transfer: entries.filter(([, r]) => r.transfer),
+    home: entries.filter(([k, r]) => !isTransfer(k, r)),
+    transfer: transfer
+      .filter(([k, r]) => TRANSFER_STEM.test(k) || !newPairs.has(pair(r)))
+      .sort(([a], [b]) => a.localeCompare(b)),
   }
+}
+
+/** Every row a report carries, across all tiers, for the summary and shared axis. */
+export function allReportRows(r: EvaluationReport): EvaluationRow[] {
+  return [...orderedRows(r.T1), ...orderedRows(r.T2), ...orderedRows(r.T2_hist)]
+}
+
+/** The most gauges any row of a gauge tier was scored at (null when unknown). */
+export function gaugeCount(rows: EvaluationRow[]): number | null {
+  const counts = rows.map((r) => r.n_clusters).filter((n): n is number => typeof n === 'number' && n > 0)
+  return counts.length ? Math.max(...counts) : null
+}
+
+/** "~100": a round, honest figure for a historical gauge count. */
+export function approxCount(n: number): string {
+  if (n < 20) return String(n)
+  return `~${Math.round(n / 10) * 10}`
+}
+
+/** How close an 80% range came to holding the truth 8 times in 10. */
+export type CoverageFit = 'near' | 'narrow' | 'wide'
+
+/** Within 5 points of 80% counts as near; below is too narrow, above too cautious. */
+export const COVERAGE_TOLERANCE = 0.05
+
+export function coverageFit(coverage: number): CoverageFit {
+  if (coverage < 0.8 - COVERAGE_TOLERANCE) return 'narrow'
+  if (coverage > 0.8 + COVERAGE_TOLERANCE) return 'wide'
+  return 'near'
+}
+
+/** True when the report says its range widening was fitted on the 1958 monsoon. */
+export function calibratedOn1958(r: EvaluationReport): boolean {
+  return Object.values(r.scale_calibration ?? {}).some((c) =>
+    (c.periods ?? []).some(([start]) => typeof start === 'string' && start.startsWith('1958')),
+  )
 }

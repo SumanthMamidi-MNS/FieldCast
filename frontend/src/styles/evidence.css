@@ -209,6 +209,92 @@
   color: var(--text-2);
 }
 
+.tier-block-desc > p + p {
+  margin-top: 6px;
+}
+
+.tier-block-desc strong {
+  color: var(--text);
+}
+
+/* Empty tiers: a quiet line, not a card-sized hole. */
+.tier-block.is-empty {
+  padding-block: var(--sp-4);
+  background: var(--surface-2);
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.tier-block.is-empty .tier-block-title {
+  font-size: var(--fs-lg);
+  color: var(--text-2);
+}
+
+.tier-empty {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* The two gauge checks sit together: today's handful, then 1960's ~100. */
+.gauge-pair > .tier-block + .tier-block {
+  margin-top: var(--sp-3);
+}
+
+.tier-block.is-hist:not(.is-empty) {
+  background: linear-gradient(var(--tier-t2-bg), var(--surface) 140px);
+}
+
+/* Did the 80% range hold 8 days in 10 at the historical gauges? */
+.cov-check {
+  margin-top: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--act-caution-line);
+  border-radius: var(--r-lg);
+  background: var(--act-caution-bg);
+}
+
+.cov-check.is-near {
+  border-color: var(--act-proceed-line);
+  background: var(--surface);
+}
+
+.cov-check-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: var(--fw-semibold);
+  color: var(--act-caution);
+}
+
+.cov-check.is-near .cov-check-title {
+  color: var(--act-proceed);
+}
+
+.cov-check-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px var(--sp-5);
+  margin-top: 6px;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.cov-check-list li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cov-check-list strong {
+  color: var(--text);
+}
+
+.cov-check-list .fit-narrow .cov-check-word {
+  color: var(--act-avoid);
+}
+
 /* --- Skill chart ----------------------------------------------------------------- */
 .skill {
   margin-top: var(--sp-5);

@@ -41,7 +41,7 @@ export function EmptyCard({
     >
       <p>
         Pick a block from the bar above. FieldCast will refine its official forecast to every
-        village inside it.
+        gram panchayat inside it.
         {exampleName && ` ${exampleName} loads instantly.`}
       </p>
     </StatusCard>
@@ -145,18 +145,18 @@ export function SidebarGuide() {
   return (
     <div className="guide">
       <p className="eyebrow">How to use FieldCast</p>
-      <h2 className="panel-title">Village-level weather for this week&rsquo;s advice</h2>
+      <h2 className="panel-title">Gram-panchayat weather for this week&rsquo;s advice</h2>
       <ol className="guide-steps">
         <li>
           <strong>Pick a block and a date.</strong> FieldCast takes the official block forecast and
-          refines it to every village cluster inside the block.
+          refines it to every gram panchayat inside the block.
         </li>
         <li>
-          <strong>Read the map.</strong> Colour shows how each village differs from the block
+          <strong>Read the map.</strong> Colour shows how each panchayat differs from the block
           forecast. The pattern shows how sure we are.
         </li>
         <li>
-          <strong>Open a village.</strong> See what to tell farmers about spraying, irrigation,
+          <strong>Pick a panchayat.</strong> See what to tell farmers about spraying, irrigation,
           harvest and fertiliser, and print it for the noticeboard.
         </li>
       </ol>

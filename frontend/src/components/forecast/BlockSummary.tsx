@@ -9,6 +9,7 @@ import {
 } from '../../lib/blockSummary'
 import type { ColorScale } from '../../lib/colorScale'
 import { formatLongDate } from '../../lib/dates'
+import { formatUnitCount } from '../../lib/format'
 import type { BlockScale } from '../../lib/mapScale'
 import { variableMeta, type VariableKey } from '../../lib/variables'
 import { TextureSwatch } from '../common/TextureSwatch'
@@ -29,7 +30,7 @@ interface BlockSummaryProps {
 
 const SUPPORT_WORD = { high: 'well supported', medium: 'moderate', low: 'low' } as const
 
-/** The sidebar's default view: the whole block at a glance, then every village. */
+/** The sidebar's default view: the whole block at a glance, then every gram panchayat. */
 export function BlockSummary({
   forecast,
   sourceLabel,
@@ -50,7 +51,7 @@ export function BlockSummary({
     <div className="summary">
       <header className="panel-head">
         <p className="eyebrow">
-          {forecast.district} district · {forecast.panchayat_count} villages
+          {forecast.district} district · {formatUnitCount(forecast.panchayat_count)}
         </p>
         <h2 className="panel-title">{forecast.block_name} block</h2>
         <p className="panel-sub">
@@ -62,21 +63,21 @@ export function BlockSummary({
       <section className="panel-section" aria-labelledby="sum-weather">
         <div className="section-head">
           <h3 id="sum-weather" className="section-title">
-            Block forecast and village range
+            Block forecast and panchayat range
           </h3>
         </div>
         <div className="spread-legend" aria-hidden>
           <span />
           <span>Block</span>
           <span />
-          <span>Villages</span>
+          <span>Panchayats</span>
         </div>
         <VariableSpreadList stats={stats} scales={scales} active={variableKey} onPick={onVariable} />
         <p className={`diff-note${diff.meaningful ? '' : ' is-flat'}`}>
           <strong>
             {diff.meaningful
-              ? 'Villages genuinely differ today.'
-              : 'Villages barely differ today; the block value is fine to use.'}
+              ? 'Panchayats genuinely differ today.'
+              : 'Panchayats barely differ today; the block value is fine to use.'}
           </strong>{' '}
           {humaniseNote(diff.note)}
         </p>
@@ -89,7 +90,7 @@ export function BlockSummary({
           </h3>
           <span className="section-aside">{variableMeta(variableKey).shortLabel}</span>
         </div>
-        <p className="conf-line" aria-label={`Villages by confidence: ${describeSupportCounts(counts)}`}>
+        <p className="conf-line" aria-label={`Gram panchayats by confidence: ${describeSupportCounts(counts)}`}>
           {(['high', 'medium', 'low'] as const)
             .filter((l) => counts[l] > 0)
             .map((l) => (
@@ -101,7 +102,7 @@ export function BlockSummary({
         </p>
         {counts.high === 0 && (
           <p className="muted small">
-            No village is rated high: nobody measures weather village by village, so these values
+            No panchayat is rated high: nobody measures weather panchayat by panchayat, so these values
             are capped at moderate. The map pattern shows each level.
           </p>
         )}

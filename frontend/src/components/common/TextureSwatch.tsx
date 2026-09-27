@@ -31,20 +31,27 @@ export function TextureSwatch({ support, color = '#9fb5ae', size = 22 }: Texture
       aria-hidden
       focusable="false"
     >
-      <defs>
-        <pattern id={`h${uid}`} width="8" height="8" patternUnits="userSpaceOnUse">
-          <line x1="0" y1="-1" x2="-9" y2="8" stroke={DARK} strokeWidth="1.6" />
-          <line x1="4" y1="-1" x2="-5" y2="8" stroke={LIGHT} strokeWidth="1.6" />
-          <line x1="8" y1="-1" x2="-1" y2="8" stroke={DARK} strokeWidth="1.6" />
-          <line x1="12" y1="-1" x2="3" y2="8" stroke={LIGHT} strokeWidth="1.6" />
-        </pattern>
-        <pattern id={`s${uid}`} width="11" height="11" patternUnits="userSpaceOnUse" x="1" y="1">
-          <circle cx="2.75" cy="2.75" r="1.6" fill={LIGHT} />
-          <circle cx="2.75" cy="2.75" r="1" fill={DARK} />
-          <circle cx="8.25" cy="8.25" r="1.6" fill={LIGHT} />
-          <circle cx="8.25" cy="8.25" r="1" fill={DARK} />
-        </pattern>
-      </defs>
+      {/* Only the pattern this level uses: a 257-row list would otherwise carry thousands of unused nodes. */}
+      {style.texture === 'hatch-low' && (
+        <defs>
+          <pattern id={`h${uid}`} width="8" height="8" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="-1" x2="-9" y2="8" stroke={DARK} strokeWidth="1.6" />
+            <line x1="4" y1="-1" x2="-5" y2="8" stroke={LIGHT} strokeWidth="1.6" />
+            <line x1="8" y1="-1" x2="-1" y2="8" stroke={DARK} strokeWidth="1.6" />
+            <line x1="12" y1="-1" x2="3" y2="8" stroke={LIGHT} strokeWidth="1.6" />
+          </pattern>
+        </defs>
+      )}
+      {style.texture === 'stipple-medium' && (
+        <defs>
+          <pattern id={`s${uid}`} width="11" height="11" patternUnits="userSpaceOnUse" x="1" y="1">
+            <circle cx="2.75" cy="2.75" r="1.6" fill={LIGHT} />
+            <circle cx="2.75" cy="2.75" r="1" fill={DARK} />
+            <circle cx="8.25" cy="8.25" r="1.6" fill={LIGHT} />
+            <circle cx="8.25" cy="8.25" r="1" fill={DARK} />
+          </pattern>
+        </defs>
+      )}
 
       <rect x="1" y="1" width="22" height="22" rx="4" fill={color} opacity={style.fillOpacity} />
       {style.texture === 'hatch-low' && (

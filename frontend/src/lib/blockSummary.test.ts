@@ -59,8 +59,8 @@ describe('advice roll-up', () => {
   })
 
   it('reads as one plain sentence, most restrictive first', () => {
-    expect(describeRollup(rollup[0]!)).toBe('Spraying: avoid in 2 villages, caution in 1, ok in 1')
-    expect(describeRollup(rollup[1]!)).toBe('Irrigation: caution in 1 village, ok in 2')
+    expect(describeRollup(rollup[0]!)).toBe('Spraying: avoid in 2 panchayats, caution in 1, ok in 1')
+    expect(describeRollup(rollup[1]!)).toBe('Irrigation: caution in 1 panchayat, ok in 2')
   })
 })
 

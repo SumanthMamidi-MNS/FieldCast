@@ -180,10 +180,35 @@ describe('describing the calendar', () => {
     ).toBe('Jun 2022–Sep 2023')
   })
 
+  it('writes a window that crosses the new year with both years in full', () => {
+    expect(describeReplay([w('2022-10-01', '2023-09-30')])).toBe('Oct 2022–Sep 2023')
+    expect(describeReplay([w('2022-10-05', '2023-05-31')])).toBe('Oct 2022–May 2023')
+    expect(describeReplay([w('2022-10-01', '2023-09-30')])).not.toContain('2022–23')
+  })
+
+  it('merges a dry season into the monsoon that follows it', () => {
+    expect(describeReplay([w('2022-10-05', '2023-05-31'), w('2023-06-01', '2023-09-30')])).toBe('Oct 2022–Sep 2023')
+    expect(
+      describeCalendar({ ...API, replay: [w('2022-10-05', '2023-05-31'), w('2023-06-01', '2023-09-30')] }),
+    ).toBe('Replay: Oct 2022–Sep 2023 · Live: yesterday to +15 days')
+  })
+
+  it('keeps a gap between seasons visible (what the API serves today)', () => {
+    const cal = calendarFromRegion(
+      region({
+        replay_windows: [
+          ['2022-06-01', '2022-09-30'],
+          ['2022-10-05', '2023-09-30'],
+        ],
+      }),
+    )
+    expect(describeCalendar(cal)).toBe('Replay: Jun–Sep 2022, Oct 2022–Sep 2023 · Live: yesterday to +15 days')
+  })
+
   it('groups same-month seasons by year and keeps others apart', () => {
     expect(
       describeReplay([w('2022-06-01', '2022-09-30'), w('2023-06-01', '2023-09-30'), w('2023-11-01', '2024-04-30')]),
-    ).toBe('Jun–Sep 2022 & 2023, Nov–Apr 2023–24')
+    ).toBe('Jun–Sep 2022 & 2023, Nov 2023–Apr 2024')
     expect(describeReplay([w('2019-06-01', '2019-09-30'), w('2021-06-01', '2021-09-30'), w('2023-06-01', '2023-09-30')])).toBe(
       'Jun–Sep 2019, 2021 & 2023',
     )

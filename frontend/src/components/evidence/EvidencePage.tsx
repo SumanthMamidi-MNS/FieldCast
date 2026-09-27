@@ -1,15 +1,21 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { api } from '../../api/client'
 import { useAsync } from '../../hooks/useAsync'
 import type { EvaluationReport, EvaluationRow } from '../../types/api'
 import {
+  allReportRows,
+  approxCount,
+  calibratedOn1958,
   classifyOutcome,
+  coverageFit,
   formatSkill,
+  gaugeCount,
   occurrenceGain,
   orderedRows,
   regionName,
   skillAxis,
   splitReports,
+  type CoverageFit,
 } from '../../lib/evidence'
 import { Icon } from '../common/Icon'
 import { Skeleton, SkeletonText } from '../common/Skeleton'
@@ -31,8 +37,8 @@ function OccurrenceNote({ row, where }: { row: EvaluationRow | undefined; where:
         <p className="occurrence-title">Rain or no rain, {where}</p>
         <p className="occurrence-text">
           {good
-            ? `The village-level call on whether it rains (2.5 mm or more) makes ${formatPercent(gain)} less error than using the block forecast's call. This is what drives spraying and harvest advice.`
-            : `The village-level call on whether it rains is ${formatPercent(-gain)} worse than the block forecast's call.`}{' '}
+            ? `FieldCast's own call on whether it rains (2.5 mm or more) makes ${formatPercent(gain)} less error than using the block forecast's call. This is what drives spraying and harvest advice.`
+            : `FieldCast's own call on whether it rains is ${formatPercent(-gain)} worse than the block forecast's call.`}{' '}
           <span className="muted num">
             Brier score {fixed(row.occurrence.brier, 3)} vs {fixed(row.occurrence.brier_naive_block, 3)} for the
             block value; lower is better.
@@ -50,33 +56,80 @@ function TierBlock({
   rows,
   axis,
   gauge = false,
+  historical = false,
+  children,
 }: {
   title: string
   kicker: string
-  description: string
+  description: ReactNode
   rows: EvaluationRow[]
   axis: Axis
   gauge?: boolean
+  historical?: boolean
+  children?: ReactNode
 }) {
+  const cls = `tier-block${gauge ? ' is-gauge' : ''}${historical ? ' is-hist' : ''}`
+  const kickerEl = (
+    <p className="kicker">
+      {gauge && <Icon name="gauge" size={16} />} {kicker}
+    </p>
+  )
   if (rows.length === 0) {
     return (
-      <div className={`tier-block${gauge ? ' is-gauge' : ''}`}>
-        <p className="kicker">{kicker}</p>
+      <div className={`${cls} is-empty`}>
+        {kickerEl}
         <h3 className="tier-block-title">{title}</h3>
-        <p className="muted">This report has no results at this level.</p>
+        <p className="tier-empty">Not available yet.</p>
       </div>
     )
   }
   const precip = rows.find((r) => r.variable === 'precip')
   return (
-    <div className={`tier-block${gauge ? ' is-gauge' : ''}`}>
-      <p className="kicker">
-        {gauge && <Icon name="gauge" size={16} />} {kicker}
-      </p>
+    <div className={cls}>
+      {kickerEl}
       <h3 className="tier-block-title">{title}</h3>
-      <p className="tier-block-desc">{description}</p>
+      <div className="tier-block-desc">{description}</div>
+      {children}
       <SkillChart rows={rows} axis={axis} caption={`${title}: skill versus the block value, by variable`} />
       <OccurrenceNote row={precip} where={gauge ? 'at real gauges' : 'on the grid'} />
+    </div>
+  )
+}
+
+const FIT_WORDS: Record<CoverageFit, string> = {
+  near: 'near the 80% target',
+  narrow: 'below 80%: ranges too narrow',
+  wide: 'above 80%: ranges on the cautious side',
+}
+
+/** One line per gauge-checked variable: did the 80% range hold 8 days in 10? */
+function CoverageCheck({ rows }: { rows: EvaluationRow[] }) {
+  const measured = rows.filter(
+    (r): r is EvaluationRow & { interval_coverage_80: number } =>
+      typeof r.interval_coverage_80 === 'number' && Number.isFinite(r.interval_coverage_80),
+  )
+  if (measured.length === 0) return null
+  const allNear = measured.every((r) => coverageFit(r.interval_coverage_80) === 'near')
+  return (
+    <div className={`cov-check${allNear ? ' is-near' : ''}`}>
+      <p className="cov-check-title">
+        <Icon name={allNear ? 'check' : 'alert'} size={16} />
+        {allNear
+          ? 'The likely ranges held the gauge reading about 8 days in 10, as they should.'
+          : 'Range check against these gauges'}
+      </p>
+      <ul className="cov-check-list">
+        {measured.map((r) => {
+          const fit = coverageFit(r.interval_coverage_80)
+          return (
+            <li key={r.variable} className={`fit-${fit}`}>
+              <span>{r.label}</span>
+              <strong className="num">{formatPercent(r.interval_coverage_80)}</strong>
+              <span className="cov-check-word">{FIT_WORDS[fit]}</span>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -84,31 +137,67 @@ function TierBlock({
 function ReportSection({ report, axis }: { report: EvaluationReport; axis: Axis }) {
   const t1 = orderedRows(report.T1)
   const t2 = orderedRows(report.T2)
+  const hist = orderedRows(report.T2_hist)
   const t1n = t1[0]
-  const gauges = t2[0]?.n_clusters
+  const gauges = gaugeCount(t2)
+  const histGauges = gaugeCount(hist)
   const size = t1n
     ? `${t1n.n.toLocaleString('en-IN')} grid-cell days${t1n.n_clusters ? ` across ${t1n.n_clusters} blocks` : ''}`
     : ''
   const t1Desc = report.transfer
     ? `Every block in this region is new to the model${size ? `: ${size}` : ''}.`
-    : `A full monsoon season held out from training${size ? `: ${size}` : ''}. Whole blocks were hidden from the model, so it could not memorise them.`
+    : `The 2022–23 dry season and the 2023 monsoon, held out from training${size ? `: ${size}` : ''}. Whole blocks were hidden from the model too, so it could not memorise them.`
+  const histTitle = `Real rain gauges — 1960 monsoon (${histGauges ? `${approxCount(histGauges)} gauges` : '~100 gauges'}, never used in training)`
   return (
     <>
       <TierBlock
         kicker="T1 · Weather grid"
         title="Against a dense weather grid"
-        description={t1Desc}
+        description={<p>{t1Desc}</p>}
         rows={t1}
         axis={axis}
       />
-      <TierBlock
-        gauge
-        kicker="T2 · Real rain gauges"
-        title="Against real rain gauges"
-        description={`Weather stations never used in training${gauges ? `, only ${gauges} of them` : ''}. This is the closest thing to ground truth, but with so few gauges no result here can be called proven.`}
-        rows={t2}
-        axis={axis}
-      />
+      <div className="gauge-pair">
+        <TierBlock
+          gauge
+          kicker="T2 · Real rain gauges, today"
+          title="Against modern rain gauges"
+          description={
+            <p>
+              Weather stations never used in training{gauges ? `, only ${gauges} of them` : ''}.
+              This is the closest thing to ground truth, but with so few gauges no result here can
+              be called proven.
+            </p>
+          }
+          rows={t2}
+          axis={axis}
+        />
+        <TierBlock
+          gauge
+          historical
+          kicker="T2 · Real rain gauges, 1960"
+          title={histTitle}
+          description={
+            <>
+              <p>
+                <strong>Why 1960?</strong> India&rsquo;s older station network had about 100 rain
+                gauges per state with public daily records; today only a handful report, so an old
+                monsoon is the one way to check against many real gauges.
+              </p>
+              <p className="muted small">
+                {calibratedOn1958(report)
+                  ? 'The ranges were widened using the 1958 monsoon, so 1960 tests that widening on a season it never saw. '
+                  : ''}
+                The weather record of that era drew on fewer observations, so treat this as a strict test.
+              </p>
+            </>
+          }
+          rows={hist}
+          axis={axis}
+        >
+          <CoverageCheck rows={hist} />
+        </TierBlock>
+      </div>
     </>
   )
 }
@@ -142,7 +231,7 @@ export function EvidencePage() {
 
   const allRows = useMemo(
     () =>
-      [...split.home, ...split.transfer].flatMap(([, r]) => [...orderedRows(r.T1), ...orderedRows(r.T2)]),
+      [...split.home, ...split.transfer].flatMap(([, r]) => allReportRows(r)),
     [split],
   )
   const axis = useMemo(() => skillAxis(allRows), [allRows])
@@ -151,9 +240,9 @@ export function EvidencePage() {
     <article className="page evidence">
       <header className="page-head">
         <p className="kicker">Evidence</p>
-        <h1 className="page-title">Is the village forecast better than the block forecast?</h1>
+        <h1 className="page-title">Is the panchayat forecast better than the block forecast?</h1>
         <p className="page-lead">
-          The simplest alternative to FieldCast is to copy the block value to every village. Every
+          The simplest alternative to FieldCast is to copy the block value to every gram panchayat. Every
           result below compares against exactly that, on data the model never saw. Where FieldCast
           does not beat it, we say so in the same size type.
         </p>
@@ -211,7 +300,7 @@ export function EvidencePage() {
       {!reports.loading && !reports.error && split.home.length === 0 && split.transfer.length === 0 && (
         <StatusCard tone="info" title="No evaluation has been run yet">
           <p>
-            Until the model is scored against held-out data, treat every village value as
+            Until the model is scored against held-out data, treat every panchayat value as
             unverified. Run <code>python -m backend.pipeline.evaluate.run</code> to produce the
             reports.
           </p>

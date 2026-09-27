@@ -121,6 +121,12 @@ export function formatDistanceKm(km: number): string {
   return `${fixed(km, 0)} km`
 }
 
+/** "1 gram panchayat", "104 gram panchayats"; `short` gives "panchayats" for tight spaces. */
+export function formatUnitCount(n: number, short = false): string {
+  const word = short ? 'panchayat' : 'gram panchayat'
+  return `${n.toLocaleString('en-IN')} ${word}${n === 1 ? '' : 's'}`
+}
+
 /** "80.5 km²". */
 export function formatArea(km2: number): string {
   return Number.isFinite(km2) ? `${fixed(km2, 1)} km²` : DASH

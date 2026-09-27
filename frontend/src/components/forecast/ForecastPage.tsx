@@ -218,7 +218,7 @@ export function ForecastPage({ active }: { active: boolean }) {
       {bulletin && current && !error && (
         <div className="bulletin-banner" role="status">
           <span>
-            Showing <strong>your bulletin values</strong>, refined to each village.
+            Showing <strong>your bulletin values</strong>, refined to each gram panchayat.
           </span>
           <button type="button" className="link-btn" onClick={() => setBulletin(null)}>
             Back to standard forecast

@@ -15,8 +15,8 @@ interface MapTooltipProps {
 /**
  * Hover card. Positioned imperatively by MapView (via the forwarded ref) so a
  * mouse move never re-renders React; content changes only when the hovered
- * village changes. Pointer-only and aria-hidden: keyboard and screen-reader
- * users get the same facts from the village list.
+ * panchayat changes. Pointer-only and aria-hidden: keyboard and screen-reader
+ * users get the same facts from the panchayat list.
  */
 export const MapTooltip = forwardRef<HTMLDivElement, MapTooltipProps>(function MapTooltip(
   { forecast, variableKey, scale },
@@ -45,7 +45,7 @@ export const MapTooltip = forwardRef<HTMLDivElement, MapTooltipProps>(function M
               <SupportChip support={v.confidence.support} label={v.confidence.support_label} />
             </>
           ) : (
-            <p className="map-tooltip-sub">No forecast for this village.</p>
+            <p className="map-tooltip-sub">No forecast for this panchayat.</p>
           )}
           <p className="map-tooltip-hint">Click for advice</p>
         </>

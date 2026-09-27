@@ -99,7 +99,7 @@ export function shortActivity(activity: string): string {
 export const ACTION_ORDER: AdvisoryAction[] = ['avoid', 'caution', 'proceed', 'no_guidance']
 
 /**
- * Count each advisory action per activity across every village, keeping
+ * Count each advisory action per activity across every gram panchayat, keeping
  * activities in the order the API first lists them.
  */
 export function rollupAdvice(panchayats: PanchayatForecast[]): ActivityRollup[] {
@@ -135,10 +135,10 @@ export function actionWord(action: AdvisoryAction): string {
   return ACTION_WORD[action]
 }
 
-/** "Spraying: avoid in 12 villages, caution in 8, ok in 5". */
+/** "Spraying: avoid in 12 panchayats, caution in 8, ok in 5". */
 export function describeRollup(row: ActivityRollup): string {
   const parts = ACTION_ORDER.filter((a) => row.counts[a] > 0).map(
-    (a, i) => `${ACTION_WORD[a]} in ${row.counts[a]}${i === 0 ? (row.counts[a] === 1 ? ' village' : ' villages') : ''}`,
+    (a, i) => `${ACTION_WORD[a]} in ${row.counts[a]}${i === 0 ? (row.counts[a] === 1 ? ' panchayat' : ' panchayats') : ''}`,
   )
   return `${row.short}: ${parts.join(', ')}`
 }

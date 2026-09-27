@@ -11,13 +11,13 @@ interface VariableSpreadListProps {
 }
 
 /**
- * One row per variable: the official block value, the range the villages
+ * One row per variable: the official block value, the range the panchayats
  * actually span, and a tiny bar on the same block-relative scale the map uses.
  * Each row switches the map to that variable.
  */
 export function VariableSpreadList({ stats, scales, active, onPick }: VariableSpreadListProps) {
   return (
-    <ul className="spread-list" aria-label="Block forecast and village range, by variable">
+    <ul className="spread-list" aria-label="Block forecast and gram panchayat range, by variable">
       {stats.map((s) => {
         const bs = scales[s.key]
         const meta = variableMeta(s.key)
@@ -55,7 +55,7 @@ export function VariableSpreadList({ stats, scales, active, onPick }: VariableSp
                 {formatNumber(s.min, s.key)}–{formatNumber(s.max, s.key)}
               </span>
               <span className="visually-hidden">
-                {`${meta.label}: block forecast ${formatNumber(s.block, s.key)} ${s.unit}; villages range from ${formatNumber(s.min, s.key)} to ${formatNumber(s.max, s.key)} ${s.unit}.${isActive ? ' Shown on the map.' : ' Show on the map.'}`}
+                {`${meta.label}: block forecast ${formatNumber(s.block, s.key)} ${s.unit}; gram panchayats range from ${formatNumber(s.min, s.key)} to ${formatNumber(s.max, s.key)} ${s.unit}.${isActive ? ' Shown on the map.' : ' Show on the map.'}`}
               </span>
             </button>
           </li>

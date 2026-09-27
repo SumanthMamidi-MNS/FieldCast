@@ -10,10 +10,10 @@ import { SupportChip } from '../common/TextureSwatch'
 const GAUGE_REACH_KM = 50
 
 function gaugeSentence(km: number | null): string {
-  if (km === null) return 'No rain gauge is close enough to check this village directly.'
+  if (km === null) return 'No rain gauge is close enough to check this panchayat directly.'
   const d = formatDistanceKm(km)
   if (km > GAUGE_REACH_KM) {
-    return `The nearest real rain gauge is ${d} away, too far to check this village directly.`
+    return `The nearest real rain gauge is ${d} away, too far to check this panchayat directly.`
   }
   return `A real rain gauge ${d} away helps anchor this estimate.`
 }
@@ -48,7 +48,7 @@ export function ConfidencePanel({
           <span>
             Support score{' '}
             <strong className="num">{formatSupportScore(confidence.support_score)}</strong>, from
-            how closely this village&rsquo;s terrain matches places the model learned from and how
+            how closely this panchayat&rsquo;s terrain matches places the model learned from and how
             near a gauge is.
           </span>
         </li>

@@ -71,7 +71,7 @@ export function BulletinDialog({
             <p id={`${id}-desc`} className="dialog-sub">
               Enter the block values from the IMD bulletin for{' '}
               <strong>{blockName ?? 'this block'}</strong> on <strong>{formatLongDate(date)}</strong>.
-              FieldCast refines them to each village. Leave a field blank to keep the system&rsquo;s
+              FieldCast refines them to each gram panchayat. Leave a field blank to keep the system&rsquo;s
               own value.
             </p>
           </div>

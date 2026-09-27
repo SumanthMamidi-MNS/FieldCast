@@ -273,14 +273,30 @@ export interface EvaluationRow {
   occurrence?: EvaluationOccurrence
 }
 
+/** How much the point-scale interval was widened for one variable, and on what. */
+export interface EvaluationScaleCalibration {
+  factor: number
+  n?: number
+  n_gauges?: number
+  /** Inclusive [start, end] ISO date ranges the factor was fitted on. */
+  periods?: [string, string][]
+}
+
 export interface EvaluationReport {
   region: string
   model_region?: string
   /** True when the models were trained on a different region. */
   transfer?: boolean
   generated_at?: string
+  scale_calibration?: Record<string, EvaluationScaleCalibration>
   T1?: Record<string, EvaluationRow>
+  /** Modern rain gauges (a handful per state). */
   T2?: Record<string, EvaluationRow>
+  /**
+   * Historical rain gauges (1960 monsoon, ~100 per state, never used in
+   * training). `{}` until the historical data has been downloaded.
+   */
+  T2_hist?: Record<string, EvaluationRow>
 }
 
 /** `GET /api/evaluation/reports`, keyed by report file stem. */

@@ -1,6 +1,6 @@
 /**
  * Illustration of the core idea: one official block number in, different
- * village numbers out, driven by which side of the hills a village is on.
+ * panchayat numbers out, driven by which side of the hills a panchayat is on.
  * Text lives in HTML so it reflows on a phone; the SVG only draws terrain,
  * wind and rain, with a few large labels.
  */
@@ -14,7 +14,7 @@ export function TerrainDiagram() {
           <p className="diagram-big num">
             12<span> mm</span>
           </p>
-          <p className="diagram-note">One number for every village in the block.</p>
+          <p className="diagram-note">One number for every gram panchayat in the block.</p>
         </div>
 
         <span className="diagram-arrow" aria-hidden>
@@ -29,7 +29,9 @@ export function TerrainDiagram() {
             <title id="terrain-title">Monsoon wind meeting a ridge</title>
             <desc id="terrain-desc">
               Moist south-west monsoon wind rises over the windward slope and drops rain there. The
-              far side of the ridge sits in a rain shadow and stays drier.
+              far side of the ridge sits in a rain shadow and stays drier. For panchayat C, FieldCast
+              looks back upwind along the monsoon direction and measures how high the ridge in the
+              way stands above it.
             </desc>
             {/* Wind */}
             <g stroke="var(--brand-500)" strokeWidth="3" fill="none" strokeLinecap="round">
@@ -67,6 +69,16 @@ export function TerrainDiagram() {
               strokeWidth="2"
             />
             <path d="M0 214c60-4 120-10 180-8s140 8 220 6" stroke="var(--brand-300)" strokeWidth="1.5" fill="none" strokeDasharray="4 5" />
+            {/* Rain-shadow feature: from C, look back upwind and measure the ridge in the way. */}
+            <g className="diagram-measure" stroke="var(--accent-700)" strokeWidth="2" fill="none" strokeLinecap="round">
+              <path d="M306 182H200" strokeDasharray="5 5" />
+              <path d="M208 176l-8 6 8 6" strokeLinejoin="round" />
+              <path d="M190 182V102M184 102h12M184 182h12" />
+            </g>
+            <text x="298" y="174" className="diagram-svg-measure" textAnchor="end">
+              looks upwind
+            </text>
+            <text x="226" y="90" className="diagram-svg-measure">ridge in the way</text>
             {/* Villages */}
             <g className="diagram-villages">
               <circle cx="132" cy="154" r="9" />
@@ -88,7 +100,7 @@ export function TerrainDiagram() {
 
         <div className="diagram-card">
           <p className="diagram-step">3 · Out</p>
-          <p className="diagram-card-title">Refined for each village</p>
+          <p className="diagram-card-title">Refined for each gram panchayat</p>
           <ul className="diagram-villages-list num">
             <li>
               <span className="v-dot">A</span> Windward slope <strong>18 mm</strong>
@@ -103,7 +115,11 @@ export function TerrainDiagram() {
           <p className="diagram-note">Together they still average to the official 12 mm.</p>
         </div>
       </div>
-      <figcaption className="diagram-caption">Illustration with made-up numbers, not a real forecast.</figcaption>
+      <figcaption className="diagram-caption">
+        For panchayat C, FieldCast looks back along the south-west monsoon wind (245°) and measures
+        the ridge standing in the way. That ridge, not C&rsquo;s own gentle slope, is what keeps it
+        dry. Illustration with made-up numbers, not a real forecast.
+      </figcaption>
     </figure>
   )
 }

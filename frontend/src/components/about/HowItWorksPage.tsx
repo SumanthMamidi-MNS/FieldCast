@@ -8,24 +8,38 @@ const SUPPORT_TITLE = { high: 'High', medium: 'Moderate', low: 'Low' } as const
 const SOURCES = [
   {
     name: 'Open-Meteo',
-    use: 'Past weather (an ERA5 reanalysis blend) for training and replay, the live block forecast, and elevation.',
+    use: 'Past weather (an ERA5 reanalysis blend) for training and replay, and the live block forecast.',
   },
-  { name: 'GADM 4.1', use: 'Block (taluka) boundaries.' },
   {
-    name: 'datameet village boundaries',
-    use: '11,740 real village outlines, grouped into village clusters of about six villages each.',
+    name: 'AWS Terrain Tiles',
+    use: 'Elevation for every terrain input, including the ridge upwind of each gram panchayat.',
   },
-  { name: 'NOAA GHCN-Daily', use: 'Real rain-gauge records, used only for checking, never for training.' },
+  { name: 'Natural Earth', use: 'Coastline, for distance to the sea.' },
+  { name: 'GADM 4.1', use: 'Block (taluka) boundaries.' },
+  { name: 'datameet village boundaries', use: 'Real village outlines: 11,740 in Maharashtra and 7,999 in Karnataka.' },
+  {
+    name: 'LGD (Local Government Directory)',
+    use: 'Which gram panchayat each village belongs to, joined by census village code.',
+  },
+  {
+    name: 'NOAA GHCN-Daily',
+    use: 'Real rain-gauge records: a handful of modern gauges, and about 100 per state from the late 1950s. Used for checking and range calibration, never for training.',
+  },
 ]
 
+/** From the README's "Limitations, stated plainly"; keep the two in step. */
 const LIMITS = [
-  'Village-level (T3) values are inference, not measurement. Nobody records weather village by village.',
-  'Most units are clusters of about six real villages, not official gram-panchayat boundaries. Each village page says which it is.',
-  'The model learned from a reanalysis, not from IMD’s operational forecast. You can enter IMD block values with “Use official bulletin”, but the model was not trained on them.',
-  'Only 9 quality-checked rain gauges exist in the pilot area, so gauge results carry wide uncertainty.',
-  'Trained on monsoon seasons. Requests outside those months are served with confidence halved and a note saying so.',
-  'Retrain for each region. In a region it was not trained on, rainfall amounts were worse than simply using the block value.',
-  'The distance-to-coast input only makes sense for the peninsular west coast.',
+  'Panchayat-level (T3) values are inference: no panchayat-scale measurements exist to check them against.',
+  'About 5% of villages could not be matched to a gram panchayat in LGD and are grouped into labelled village clusters.',
+  'The models learn from a reanalysis (ERA5), not an IMD operational forecast. IMD block values can be supplied through the app (“Use official bulletin”), but were not used in training.',
+  'Modern rain gauges are scarce (4 in the modelled Maharashtra blocks); the ~100-gauge test uses 1960, when the reanalysis assimilated fewer observations.',
+  'Each state needs its own training: in a region it was not trained on, rainfall amounts were worse than the block value.',
+  'Humidity and wind have no gauge validation, so their ranges use a fixed widening.',
+]
+
+const UNIT_STATS = [
+  { state: 'Maharashtra', gp: '8,072', clusters: '138', matched: '94%' },
+  { state: 'Karnataka', gp: '1,730', clusters: '63', matched: '96%' },
 ]
 
 export function HowItWorksPage() {
@@ -33,12 +47,12 @@ export function HowItWorksPage() {
     <article className="page prose-page">
       <header className="page-head">
         <p className="kicker">How it works</p>
-        <h1 className="page-title">From one block number to every village</h1>
+        <h1 className="page-title">From one block number to every gram panchayat</h1>
         <p className="page-lead">
           IMD issues one forecast per block. But a block in the Western Ghats can hold a rain-soaked
           slope and a dry valley a few kilometres apart. FieldCast refines the block forecast for
-          each village using the shape of the land, and says honestly how far each number can be
-          trusted.
+          each gram panchayat using the shape of the land, and says honestly how far each number
+          can be trusted.
         </p>
       </header>
 
@@ -50,17 +64,29 @@ export function HowItWorksPage() {
             In the monsoon, moist wind blows in from the south-west. Where it meets a slope facing
             the wind, the air rises, cools and drops its rain. On the far side of the ridge, the
             <em> leeward</em> slope, the same air sinks and dries out: a rain shadow. Temperature
-            follows height too: higher villages are cooler.
+            follows height too: higher places are cooler.
           </p>
           <p>
-            FieldCast learned these patterns from several years of past weather across the pilot
-            districts. For each village it looks at elevation, slope, which way the slope faces the
-            monsoon, roughness and distance to the coast, and predicts how far that village differs
+            A rain shadow is caused by the ridge <strong>upwind</strong> of a place, not by its own
+            slope. So for every gram panchayat FieldCast looks back along the monsoon wind (from
+            245°, the south-west) and measures how high the ridge in the way stands, and how
+            steeply the land rises just ahead. A village on gentle ground behind a tall ridge is
+            still in the shadow.
+          </p>
+          <p>
+            Alongside those, it looks at elevation, slope, which way the slope faces the monsoon,
+            roughness and distance to the coast, and predicts how far each gram panchayat differs
             from the block value. It predicts the <strong>difference</strong>, not a fresh number,
             so if it has learned nothing it simply returns the block value.
           </p>
           <p>
-            Village values are then adjusted so their area-weighted average equals the official
+            It learned from the <strong>whole year</strong>, not just the rains: four monsoons
+            (2019–2022) and the 2021–22 dry season, October to May. The 2022–23 dry season and the 2023
+            monsoon were kept back for testing, so the results on the Evidence page come from
+            seasons the model never saw.
+          </p>
+          <p>
+            Panchayat values are then adjusted so their area-weighted average equals the official
             block value. FieldCast never contradicts the agency&rsquo;s own forecast; it only shows
             where within the block the weather is likely to land.
           </p>
@@ -73,16 +99,42 @@ export function HowItWorksPage() {
       </section>
 
       <section className="prose-section" aria-labelledby="hw-units">
-        <h2 id="hw-units">Gram panchayats and village clusters</h2>
+        <h2 id="hw-units">Real gram panchayats</h2>
         <div className="prose">
           <p>
-            Where official gram-panchayat boundaries (from LGD) are available, FieldCast uses them
-            and labels the unit a <strong>gram panchayat</strong>. Where they are not, it groups
-            about six neighbouring villages into a <strong>village cluster</strong>, an
-            approximate boundary, and labels it that way. Every unit served today is a village
-            cluster.
+            Each unit on the map is a real <strong>gram panchayat</strong>. FieldCast builds it from
+            the outlines of the villages that belong to it, using the Government of India&rsquo;s
+            Local Government Directory (LGD), matched village by village on the census code. A gram
+            panchayat covers about 1.4 villages on average.
+          </p>
+          <p>
+            A few villages have no match in LGD. Rather than guess, FieldCast groups them into a
+            small <strong>village cluster</strong> and says so: the list marks it
+            &ldquo;cluster&rdquo;, and its page reads &ldquo;Village cluster (approximate
+            boundary)&rdquo;.
           </p>
         </div>
+        <table className="unit-stats">
+          <caption className="visually-hidden">Gram panchayats and village clusters served, by state</caption>
+          <thead>
+            <tr>
+              <th scope="col">State</th>
+              <th scope="col">Gram panchayats</th>
+              <th scope="col">Village clusters</th>
+              <th scope="col">Villages matched</th>
+            </tr>
+          </thead>
+          <tbody>
+            {UNIT_STATS.map((s) => (
+              <tr key={s.state}>
+                <th scope="row">{s.state}</th>
+                <td className="num">{s.gp}</td>
+                <td className="num">{s.clusters}</td>
+                <td className="num">{s.matched}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
       <section className="prose-section" aria-labelledby="hw-conf">
@@ -90,7 +142,7 @@ export function HowItWorksPage() {
         <div className="prose">
           <p>
             Every number comes with a likely range that should hold the truth on 8 days in 10, and a
-            confidence level. Confidence is lower where the village&rsquo;s terrain is unlike anywhere
+            confidence level. Confidence is lower where the panchayat&rsquo;s terrain is unlike anywhere
             the model learned from, or where no rain gauge is nearby. Low confidence widens the range
             and makes the advice more cautious: spraying, fertiliser and harvest move from
             &ldquo;go ahead&rdquo; to &ldquo;take care&rdquo;, never the other way.
@@ -117,6 +169,13 @@ export function HowItWorksPage() {
         <h2 id="hw-tiers">Three levels of evidence</h2>
         <div className="prose">
           <p>Every value says which of these it rests on. Uncertainty widens down the list.</p>
+          <p>
+            Rain gauges are the real test, and modern ones are scarce: only 4 share daily records
+            in the modelled Maharashtra blocks. India&rsquo;s older station network had about 100
+            gauges per state, so FieldCast is also checked against roughly 100 historical gauges
+            per state in the 1960 monsoon, none of them used in training. The likely ranges were
+            widened using the 1958 monsoon so they hold real gauge readings about 8 days in 10.
+          </p>
         </div>
         <ol className="tier-cards">
           {(['T1', 'T2', 'T3'] as const).map((t) => (

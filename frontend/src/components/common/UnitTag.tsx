@@ -7,7 +7,7 @@ import type { UnitType } from '../../types/api'
 export function UnitTag({ unitType }: { unitType: UnitType }) {
   if (unitType === 'gram_panchayat') return null
   return (
-    <span className="unit-tag" title="Village cluster: about six neighbouring villages, approximate boundary">
+    <span className="unit-tag" title="Village cluster: neighbouring villages not matched to a gram panchayat in the LGD directory. Approximate boundary.">
       cluster
     </span>
   )
