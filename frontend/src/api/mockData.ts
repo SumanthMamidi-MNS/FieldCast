@@ -448,8 +448,12 @@ function makeVariable(args: {
   unitRef: Unit
   rainProbability?: number
 }): VariableForecast {
-  const value = round(args.value, 1)
   const blockValue = round(args.blockValue, 1)
+  // Mirrors the backend's serving policy today: the rain amount did not beat
+  // the block value on validation, so rain's point value is the block value
+  // (its range and rain chance still vary by panchayat).
+  const fromBlock = args.variable === 'precip'
+  const value = fromBlock ? blockValue : round(args.value, 1)
   return {
     variable: args.variable,
     label: args.label,
@@ -460,6 +464,7 @@ function makeVariable(args: {
     confidence: makeConfidence(args.unitRef, args.lower, args.upper),
     rain_probability:
       args.rainProbability === undefined ? null : round(clamp01(args.rainProbability), 2),
+    value_source: fromBlock ? 'block' : 'model',
   }
 }
 

@@ -14,6 +14,8 @@ interface MapPanelProps {
   available: Set<string>
   blockScale: BlockScale
   unit: string
+  /** Rain's official block amount, quoted by the legend when the map shows rain chance. */
+  blockAmount: number
   selectedId: string | null
   onSelect: (id: string) => void
   showControls: boolean
@@ -35,6 +37,7 @@ export function MapPanel(props: MapPanelProps) {
         forecasts={props.forecasts}
         variableKey={props.variableKey}
         scale={props.blockScale.scale}
+        metric={props.blockScale.metric}
         selectedId={props.selectedId}
         onSelect={props.onSelect}
         overlayPadding={props.compact ? PHONE_PADDING : DESKTOP_PADDING}
@@ -55,6 +58,8 @@ export function MapPanel(props: MapPanelProps) {
               unit={props.unit}
               scale={props.blockScale.scale}
               domain={props.blockScale.domain}
+              metric={props.blockScale.metric}
+              blockAmount={props.blockAmount}
               defaultOpen={!props.compact}
             />
           </div>

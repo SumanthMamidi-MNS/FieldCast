@@ -2,6 +2,7 @@ import type { EvaluationRow } from '../../types/api'
 import {
   OUTCOME_LABEL,
   baselineLosses,
+  blockServedNote,
   classifyOutcome,
   formatSkill,
   type Outcome,
@@ -74,6 +75,7 @@ export function SkillChart({
           const losses = baselineLosses(r)
           const served = r.reconciled_skill_vs_naive
           const ciText = r.skill_ci90 ? `, 90% range ${formatSkill(lo)} to ${formatSkill(hi)}` : ''
+          const blockNote = blockServedNote(r)
           return (
             <li key={r.variable} className={`skill-row out-${outcome}`}>
               <div className="skill-name">
@@ -87,7 +89,7 @@ export function SkillChart({
               <div
                 className="skill-track"
                 role="img"
-                aria-label={`${r.label}: skill ${formatSkill(r.skill_vs_naive)}${ciText}. ${OUTCOME_LABEL[outcome]}.`}
+                aria-label={`${r.label}: skill ${formatSkill(r.skill_vs_naive)}${ciText}. ${OUTCOME_LABEL[outcome]}.${blockNote ? ' Official block value served.' : ''}`}
               >
                 {ticks.map((t) => (
                   <span key={t} className={`skill-grid${t === 0 ? ' is-zero' : ''}`} style={{ left: pct(t) }} />
@@ -117,6 +119,16 @@ export function SkillChart({
                   <p className="cov-text muted">Not measured</p>
                 )}
               </div>
+
+              {blockNote && (
+                <p className="skill-block-note">
+                  <Icon name="info" size={14} />
+                  <span>
+                    <strong>{blockNote.lead}</strong>
+                    {blockNote.rest && ` ${blockNote.rest}`}
+                  </span>
+                </p>
+              )}
 
               {(r.verdict || losses.length > 0 || served !== undefined) && (
                 <div className="skill-notes">

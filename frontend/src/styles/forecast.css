@@ -190,6 +190,12 @@
   color: var(--text-2);
 }
 
+.legend-plain strong {
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  white-space: nowrap;
+}
+
 .legend-ramp-wrap {
   position: relative;
   margin-top: var(--sp-3);
@@ -295,6 +301,10 @@
   font-weight: var(--fw-semibold);
 }
 
+.legend-stats.is-pair {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .legend-stats .is-block dd {
   font-weight: var(--fw-bold);
 }
@@ -376,6 +386,11 @@
 }
 
 .map-tooltip-sub {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.map-tooltip-unit {
   font-size: var(--fs-xs);
   color: var(--text-2);
 }

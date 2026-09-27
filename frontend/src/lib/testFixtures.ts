@@ -7,6 +7,7 @@ export function variable(
   value: number,
   block: number,
   support: SupportLevel = 'medium',
+  opts: { source?: 'model' | 'block'; chance?: number | null } = {},
 ): VariableForecast {
   return {
     variable: key,
@@ -26,7 +27,8 @@ export function variable(
       tier_note: '',
       nearest_gauge_km: 40,
     },
-    rain_probability: key === 'precip' ? 0.4 : null,
+    rain_probability: opts.chance !== undefined ? opts.chance : key === 'precip' ? 0.4 : null,
+    value_source: opts.source ?? 'model',
   }
 }
 

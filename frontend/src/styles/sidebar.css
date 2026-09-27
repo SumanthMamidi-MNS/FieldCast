@@ -188,6 +188,31 @@
   white-space: nowrap;
 }
 
+/* Rain served from the block: the range column shows rain chance, labelled. */
+.spread-range.is-chance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+
+.spread-range-note {
+  font-size: var(--fs-2xs);
+  color: var(--text-3);
+}
+
+/* Block-sourced value: one number for every panchayat, so no range to draw. */
+.spread-range.is-same {
+  font-size: var(--fs-2xs);
+  line-height: 1.25;
+  color: var(--text-3);
+  white-space: normal;
+}
+
+.spread-bar.is-same {
+  background: repeating-linear-gradient(90deg, var(--gray-100) 0 4px, transparent 4px 7px);
+}
+
 .diff-note {
   margin-top: var(--sp-3);
   padding: 10px var(--sp-3);
@@ -443,6 +468,12 @@
 .village-row-value {
   font-size: var(--fs-md);
   font-weight: var(--fw-semibold);
+}
+
+.village-row-sub {
+  font-size: var(--fs-2xs);
+  color: var(--text-3);
+  white-space: nowrap;
 }
 
 .village-empty {

@@ -6,6 +6,7 @@
 
 import type { AdvisoryAction, PanchayatForecast, SupportLevel } from '../types/api'
 import { VARIABLE_ORDER, VARIABLES, type VariableKey } from './variables'
+import { metricValues, spreadMode, type SpreadMode } from './valueSource'
 
 export interface VariableStats {
   key: VariableKey
@@ -18,6 +19,14 @@ export interface VariableStats {
   spread: number
   /** Villages that carry this variable. */
   count: number
+  /**
+   * How the row reads (see `spreadMode`): the panchayats' range, their
+   * rain-chance range (rain served from the block), or "same across panchayats".
+   */
+  mode: SpreadMode
+  /** Lowest and highest rain chance in percent; NaN unless `mode` is 'chance'. */
+  chanceMin: number
+  chanceMax: number
 }
 
 export function variableStats(panchayats: PanchayatForecast[], key: VariableKey): VariableStats | null {
@@ -38,7 +47,11 @@ export function variableStats(panchayats: PanchayatForecast[], key: VariableKey)
     unit = v.unit || unit
   }
   if (count === 0) return null
-  return { key, label, unit, block, min, max, spread: max - min, count }
+  const mode = spreadMode(panchayats, key)
+  const chances = mode === 'chance' ? metricValues(panchayats, key, 'chance') : []
+  const chanceMin = chances.length ? Math.min(...chances) : Number.NaN
+  const chanceMax = chances.length ? Math.max(...chances) : Number.NaN
+  return { key, label, unit, block, min, max, spread: max - min, count, mode, chanceMin, chanceMax }
 }
 
 export function allVariableStats(panchayats: PanchayatForecast[]): VariableStats[] {

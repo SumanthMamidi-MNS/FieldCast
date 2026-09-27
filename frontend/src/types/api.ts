@@ -69,6 +69,15 @@ export interface VariableForecast {
    * and "12 mm expected" are different statements.
    */
   rain_probability: number | null
+
+  /**
+   * Where `value` comes from. `"model"`: FieldCast's panchayat estimate.
+   * `"block"`: the official block value, served because the model did not beat
+   * it on validation data (then `value === block_value` and `anomaly === 0`,
+   * while `confidence` and `rain_probability` still come from the model and
+   * still differ by panchayat). Backend default is `"model"`.
+   */
+  value_source: 'model' | 'block'
 }
 
 /** schemas.AdvisoryItem */
@@ -271,6 +280,16 @@ export interface EvaluationRow {
   /** Skill after block-mean reconciliation — what the API actually serves. */
   reconciled_skill_vs_naive?: number
   occurrence?: EvaluationOccurrence
+  /**
+   * True when the API serves the official block value for this variable's
+   * point, because the model did not beat it on validation data. Skill is then
+   * 0 by design.
+   */
+  point_is_block?: boolean
+  /** Served-point skill on the validation data that decided the serving policy. */
+  validation_served_skill?: number
+  /** The model's own skill on this test data, before the serving policy. */
+  raw_model_skill_vs_naive?: number
 }
 
 /** How much the point-scale interval was widened for one variable, and on what. */

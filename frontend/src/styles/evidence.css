@@ -468,6 +468,32 @@
   color: var(--text-2);
 }
 
+/* Point served from the block value: the policy, said plainly beside the row. */
+.skill-block-note {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.skill-block-note svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--text-3);
+}
+
+.skill-block-note strong {
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
 .skill-loss-note {
   color: var(--loss);
   font-weight: var(--fw-semibold);

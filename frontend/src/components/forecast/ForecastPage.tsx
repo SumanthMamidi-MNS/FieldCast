@@ -4,7 +4,7 @@ import { useAsync } from '../../hooks/useAsync'
 import { useLocalStorage } from '../../hooks/useLocalStorage'
 import { MOBILE_QUERY, prefersReducedMotion, useMediaQuery } from '../../hooks/useMediaQuery'
 import { calendarFromRegion, dateKind, pastSeasonExample, todayIso } from '../../lib/dates'
-import { blockScale, type BlockScale } from '../../lib/mapScale'
+import { blockScale, blockValueOf, type BlockScale } from '../../lib/mapScale'
 import { VARIABLE_ORDER, VARIABLES, isVariableKey, type VariableKey } from '../../lib/variables'
 import { ControlBar } from '../controls/ControlBar'
 import { BulletinDialog } from '../controls/BulletinDialog'
@@ -181,6 +181,7 @@ export function ForecastPage({ active }: { active: boolean }) {
         onVariable={(k) => setStoredVariable(k)}
         scales={scales}
         scale={activeScale.scale}
+        metric={activeScale.metric}
         selectedId={selectedId}
         onSelect={selectVillage}
       />
@@ -234,7 +235,8 @@ export function ForecastPage({ active }: { active: boolean }) {
           onVariable={(k) => setStoredVariable(k)}
           available={available}
           blockScale={activeScale}
-          unit={unit}
+          unit={activeScale.metric === 'chance' ? '%' : unit}
+          blockAmount={blockValueOf(panchayats, variableKey)}
           selectedId={selectedId}
           onSelect={selectVillage}
           showControls={current !== null && !error}

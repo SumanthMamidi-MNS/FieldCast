@@ -1,7 +1,8 @@
 import { useId, useState } from 'react'
 import type { ColorScale, RelativeDomain } from '../../lib/colorScale'
 import { SUPPORT_LEVELS, confidenceStyle } from '../../lib/confidenceTexture'
-import { formatNumber, formatRange, formatValue } from '../../lib/format'
+import { fixed, formatNumber, formatRange, formatValue } from '../../lib/format'
+import { RAIN_CHANCE_TITLE, type MapMetric } from '../../lib/valueSource'
 import { variableMeta, type VariableKey } from '../../lib/variables'
 import { Icon } from '../common/Icon'
 import { TextureSwatch } from '../common/TextureSwatch'
@@ -11,6 +12,10 @@ interface MapLegendProps {
   unit: string
   scale: ColorScale
   domain: RelativeDomain
+  /** 'chance' when the Rain view paints chance of rain instead of amount. */
+  metric: MapMetric
+  /** Rain's official block amount, quoted when the map shows chance. */
+  blockAmount: number
   defaultOpen: boolean
 }
 
@@ -22,7 +27,7 @@ const SUPPORT_SHORT = { high: 'Well supported', medium: 'Moderate', low: 'Low' }
  * The block value sits on the ramp, and the real lowest and highest panchayats
  * are marked, so the scale is never mistaken for the data's range.
  */
-export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: MapLegendProps) {
+export function MapLegend({ variableKey, unit, scale, domain, metric, blockAmount, defaultOpen }: MapLegendProps) {
   const [open, setOpen] = useState(defaultOpen)
   const bodyId = useId()
   const meta = variableMeta(variableKey)
@@ -32,10 +37,15 @@ export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: Map
     .join(', ')})`
   const pct = (v: number) => `${(scale.normalize(v) * 100).toFixed(2)}%`
   const hasData = Number.isFinite(domain.dataMin) && Number.isFinite(domain.dataMax)
-  const n = (v: number) => formatNumber(v, variableKey)
+  const chance = metric === 'chance'
+  const n = (v: number) => (chance ? `${fixed(v, 0)}%` : formatNumber(v, variableKey))
   // Sequential scales say where they start, because it changes what pale means.
-  const scaleNote =
-    domain.fit === 'range'
+  const scaleNote = chance
+    ? {
+        lead: `Scale fitted to this block: ${n(domain.min)}–${n(domain.max)}.`,
+        rest: 'Darker blue means rain is more likely in that panchayat.',
+      }
+    : domain.fit === 'range'
       ? {
           lead: `Scale fitted to this block: ${formatRange(domain.min, domain.max, variableKey, unit)}.`,
           rest: 'Every panchayat is wet, so colour shows how they differ, not total rain.',
@@ -54,19 +64,37 @@ export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: Map
         onClick={() => setOpen((v) => !v)}
       >
         <span className="legend-toggle-title">
-          {meta.label} <span className="legend-unit">({unit})</span>
+          {chance ? (
+            RAIN_CHANCE_TITLE
+          ) : (
+            <>
+              {meta.label} <span className="legend-unit">({unit})</span>
+            </>
+          )}
         </span>
         <Icon name="chevron-down" size={16} className={open ? 'is-flipped' : undefined} />
       </button>
 
       <div id={bodyId} className="legend-body" hidden={!open}>
-        <p className="legend-plain">{meta.plain}</p>
+        {chance ? (
+          <p className="legend-plain">
+            Amount: the official block forecast (
+            <strong className="num">{formatValue(blockAmount, variableKey, 'mm')}</strong>); FieldCast does not
+            improve on it for amounts.
+          </p>
+        ) : (
+          <p className="legend-plain">{meta.plain}</p>
+        )}
 
         <div
           className="legend-ramp-wrap"
           role="img"
           aria-label={
-            hasData
+            chance
+              ? hasData
+                ? `Colour scale for chance of rain. Gram panchayats range from ${n(domain.dataMin)} to ${n(domain.dataMax)}. ${scaleNote?.lead ?? ''}`
+                : 'Colour scale for chance of rain.'
+              : hasData
               ? `Colour scale. Block forecast ${n(domain.block)} ${unit}. Gram panchayats range from ${n(domain.dataMin)} to ${n(domain.dataMax)} ${unit}.${scaleNote ? ` ${scaleNote.lead}` : ''}`
               : `Colour scale centred on the block forecast of ${n(domain.block)} ${unit}.`
           }
@@ -78,30 +106,32 @@ export function MapLegend({ variableKey, unit, scale, domain, defaultOpen }: Map
               <span className="legend-mark is-data" style={{ left: pct(domain.dataMax) }} />
             </>
           )}
-          <span className="legend-mark is-block" style={{ left: pct(domain.block) }} />
+          {!chance && <span className="legend-mark is-block" style={{ left: pct(domain.block) }} />}
         </div>
         <div className="legend-ends" aria-hidden>
-          <span>{meta.ends[0]}</span>
-          <span>{meta.ends[1]}</span>
+          <span>{chance ? 'Less likely' : meta.ends[0]}</span>
+          <span>{chance ? 'More likely' : meta.ends[1]}</span>
         </div>
         {scaleNote && (
-          <p className={`legend-fit${domain.fit === 'range' ? ' is-fitted' : ''}`}>
+          <p className={`legend-fit${domain.fit === 'range' && !chance ? ' is-fitted' : ''}`}>
             <strong className="num">{scaleNote.lead}</strong>
             {scaleNote.rest && ` ${scaleNote.rest}`}
           </p>
         )}
 
-        <dl className="legend-stats">
+        <dl className={`legend-stats${chance ? ' is-pair' : ''}`}>
           <div>
             <dt>Lowest</dt>
             <dd className="num">{hasData ? n(domain.dataMin) : '—'}</dd>
           </div>
-          <div className="is-block">
-            <dt>
-              <span className="legend-block-key" aria-hidden /> Block
-            </dt>
-            <dd className="num">{n(domain.block)}</dd>
-          </div>
+          {!chance && (
+            <div className="is-block">
+              <dt>
+                <span className="legend-block-key" aria-hidden /> Block
+              </dt>
+              <dd className="num">{n(domain.block)}</dd>
+            </div>
+          )}
           <div>
             <dt>Highest</dt>
             <dd className="num">{hasData ? n(domain.dataMax) : '—'}</dd>

@@ -212,6 +212,31 @@
   line-height: 1.4;
 }
 
+/* The value is the official block value: say where it comes from, quietly. */
+.source-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-2);
+  background: var(--gray-50);
+  white-space: nowrap;
+}
+
+.var-card-source {
+  padding: 6px var(--sp-2);
+  border-left: 2px solid var(--border-strong);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--text-2);
+  background: var(--gray-50);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
 .rain-chance {
   display: grid;
   gap: 5px;

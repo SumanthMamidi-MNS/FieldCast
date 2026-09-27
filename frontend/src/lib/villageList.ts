@@ -5,6 +5,7 @@
 
 import type { PanchayatForecast } from '../types/api'
 import type { VariableKey } from './variables'
+import { metricValue, type MapMetric } from './valueSource'
 
 export type VillageSort = 'value-desc' | 'value-asc' | 'name'
 
@@ -34,22 +35,24 @@ const collator = new Intl.Collator('en', { sensitivity: 'base', numeric: true })
 /**
  * Sort without mutating the input. Villages missing the variable always sink
  * to the bottom whichever direction is chosen; ties break by name so the order
- * is stable across renders.
+ * is stable across renders. `metric` matches the map: when rain is shown as
+ * chance of rain, "highest first" means most likely to rain.
  */
 export function sortVillages(
   rows: PanchayatForecast[],
   sort: VillageSort,
   key: VariableKey,
+  metric: MapMetric = 'amount',
 ): PanchayatForecast[] {
   const byName = (a: PanchayatForecast, b: PanchayatForecast) =>
     collator.compare(a.panchayat_name, b.panchayat_name)
   if (sort === 'name') return [...rows].sort(byName)
   const dir = sort === 'value-desc' ? -1 : 1
   return [...rows].sort((a, b) => {
-    const av = a.variables[key]?.value
-    const bv = b.variables[key]?.value
-    const aOk = av !== undefined && Number.isFinite(av)
-    const bOk = bv !== undefined && Number.isFinite(bv)
+    const av = metricValue(a.variables[key], metric)
+    const bv = metricValue(b.variables[key], metric)
+    const aOk = Number.isFinite(av)
+    const bOk = Number.isFinite(bv)
     if (!aOk || !bOk) return aOk === bOk ? byName(a, b) : aOk ? -1 : 1
     return av === bv ? byName(a, b) : (av - bv) * dir
   })

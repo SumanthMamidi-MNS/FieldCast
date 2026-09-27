@@ -42,7 +42,7 @@ export function EmptyCard({
       <p>
         Pick a block from the bar above. FieldCast will refine its official forecast to every
         gram panchayat inside it.
-        {exampleName && ` ${exampleName} loads instantly.`}
+        {exampleName && ` Or start with ${exampleName}.`}
       </p>
     </StatusCard>
   )

@@ -8,7 +8,7 @@ import { FILL_OPACITY, confidenceStyle } from '../../lib/confidenceTexture'
 import { buildHatchPattern, buildStipplePattern } from '../../lib/mapPatterns'
 import { buildFocusLabel, buildValueLabel } from '../../lib/mapLabels'
 import { boundsOf, fitPadding, labelImageId, labelSortKey } from '../../lib/mapGeometry'
-import { formatValue } from '../../lib/format'
+import { formatMetric, metricValue, type MapMetric } from '../../lib/valueSource'
 import type { VariableKey } from '../../lib/variables'
 import { MapTooltip } from './MapTooltip'
 
@@ -17,6 +17,8 @@ interface MapViewProps {
   forecasts: PanchayatForecast[]
   variableKey: VariableKey
   scale: ColorScale
+  /** What the colours and labels measure (see `rainMapMode`). */
+  metric: MapMetric
   selectedId: string | null
   onSelect: (panchayatId: string) => void
   /** Extra padding (px) so the fitted block clears overlaid controls. */
@@ -88,6 +90,7 @@ function buildData(
   forecasts: PanchayatForecast[],
   variableKey: VariableKey,
   scale: ColorScale,
+  metric: MapMetric,
 ) {
   const byId = new Map(forecasts.map((f) => [f.panchayat_id, f]))
   const images: LabelImage[] = []
@@ -105,7 +108,7 @@ function buildData(
     type: 'FeatureCollection' as const,
     features: geometry.map((g) => {
       const variable = byId.get(g.panchayat_id)?.variables[variableKey]
-      const value = variable?.value ?? Number.NaN
+      const value = metricValue(variable, metric)
       const props: FeatureProps = {
         id: g.panchayat_id,
         name: g.panchayat_name,
@@ -124,7 +127,7 @@ function buildData(
     features: forecasts.flatMap((f) => {
       if (!Number.isFinite(f.longitude) || !Number.isFinite(f.latitude)) return []
       const variable = f.variables[variableKey]
-      const valueText = variable ? formatValue(variable.value, variableKey, variable.unit) : 'no data'
+      const valueText = variable ? formatMetric(metricValue(variable, metric), variableKey, metric, variable.unit) : 'no data'
       const name = f.panchayat_name
       const valueImage = labelImageId('value', valueText)
       const focusImage = labelImageId('focus', name, valueText)
@@ -179,6 +182,7 @@ export function MapView({
   forecasts,
   variableKey,
   scale,
+  metric,
   selectedId,
   onSelect,
   overlayPadding = NO_PAD,
@@ -201,8 +205,8 @@ export function MapView({
   paddingRef.current = overlayPadding
 
   const data = useMemo(
-    () => buildData(geometry, forecasts, variableKey, scale),
-    [geometry, forecasts, variableKey, scale],
+    () => buildData(geometry, forecasts, variableKey, scale, metric),
+    [geometry, forecasts, variableKey, scale, metric],
   )
   const hovered = useMemo(
     () => forecasts.find((f) => f.panchayat_id === hoveredId) ?? null,
@@ -518,7 +522,7 @@ export function MapView({
         role="region"
         aria-label="Gram panchayat map. Every panchayat is also listed, with the same values, in the panel beside it."
       />
-      <MapTooltip ref={tooltipRef} forecast={hovered} variableKey={variableKey} scale={scale} />
+      <MapTooltip ref={tooltipRef} forecast={hovered} variableKey={variableKey} scale={scale} metric={metric} />
     </div>
   )
 }

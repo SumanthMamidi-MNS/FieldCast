@@ -2,7 +2,8 @@ import { memo, useId, useMemo, useState } from 'react'
 import type { PanchayatForecast } from '../../types/api'
 import type { ColorScale } from '../../lib/colorScale'
 import { SORT_LABELS, searchVillages, sortVillages, type VillageSort } from '../../lib/villageList'
-import { deltaClass, formatDelta, formatUnitCount, formatValue } from '../../lib/format'
+import { deltaClass, formatDelta, formatUnitCount } from '../../lib/format'
+import { formatMetric, isBlockSourced, metricValue, type MapMetric } from '../../lib/valueSource'
 import { variableMeta, type VariableKey } from '../../lib/variables'
 import { Icon } from '../common/Icon'
 import { SupportChip, TextureSwatch } from '../common/TextureSwatch'
@@ -12,6 +13,7 @@ interface VillageListProps {
   villages: PanchayatForecast[]
   variableKey: VariableKey
   scale: ColorScale
+  metric: MapMetric
   selectedId: string | null
   onSelect: (id: string) => void
 }
@@ -19,6 +21,7 @@ interface VillageListProps {
 interface VillageRowProps {
   village: PanchayatForecast
   variableKey: VariableKey
+  metric: MapMetric
   color: string | undefined
   selected: boolean
   onSelect: (id: string) => void
@@ -29,9 +32,16 @@ interface VillageRowProps {
  * 257-panchayat block then re-renders only the rows whose content changed,
  * and React just moves the rest.
  */
-const VillageRow = memo(function VillageRow({ village: v, variableKey, color, selected, onSelect }: VillageRowProps) {
+const VillageRow = memo(function VillageRow({
+  village: v,
+  variableKey,
+  metric,
+  color,
+  selected,
+  onSelect,
+}: VillageRowProps) {
   const variable = v.variables[variableKey]
-  const value = variable?.value ?? Number.NaN
+  const value = metricValue(variable, metric)
   return (
     <li>
       <button
@@ -53,8 +63,16 @@ const VillageRow = memo(function VillageRow({ village: v, variableKey, color, se
           {variable && <SupportChip support={variable.confidence.support} compact />}
         </span>
         <span className="village-row-nums">
-          <span className="village-row-value num">{formatValue(value, variableKey, variable?.unit)}</span>
-          {variable && (
+          <span className="village-row-value num">{formatMetric(value, variableKey, metric, variable?.unit)}</span>
+          {variable && metric === 'chance' && (
+            <span className="village-row-sub">
+              chance<span className="visually-hidden"> of rain</span>
+            </span>
+          )}
+          {variable && metric !== 'chance' && isBlockSourced(variable) && (
+            <span className="village-row-sub">block value</span>
+          )}
+          {variable && metric !== 'chance' && !isBlockSourced(variable) && (
             <span className={`delta num${deltaClass(variable.value, variable.block_value, variableKey)}`}>
               {formatDelta(variable.value, variable.block_value, variableKey, variable.unit)}
               <span className="visually-hidden"> compared with the block forecast</span>
@@ -71,15 +89,16 @@ const VillageRow = memo(function VillageRow({ village: v, variableKey, color, se
  * every gram panchayat is a real button with the map's colour, texture and value, and
  * its difference from the block forecast.
  */
-export function VillageList({ villages, variableKey, scale, selectedId, onSelect }: VillageListProps) {
+export function VillageList({ villages, variableKey, scale, metric, selectedId, onSelect }: VillageListProps) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<VillageSort>('value-desc')
   const id = useId()
   const meta = variableMeta(variableKey)
+  const sortName = metric === 'chance' ? 'Rain chance' : meta.shortLabel
 
   const rows = useMemo(
-    () => sortVillages(searchVillages(villages, query), sort, variableKey),
-    [villages, query, sort, variableKey],
+    () => sortVillages(searchVillages(villages, query), sort, variableKey, metric),
+    [villages, query, sort, variableKey, metric],
   )
 
   return (
@@ -106,7 +125,7 @@ export function VillageList({ villages, variableKey, scale, selectedId, onSelect
             <select value={sort} onChange={(e) => setSort(e.target.value as VillageSort)}>
               {(Object.keys(SORT_LABELS) as VillageSort[]).map((k) => (
                 <option key={k} value={k}>
-                  {k === 'name' ? SORT_LABELS[k] : `${meta.shortLabel}: ${SORT_LABELS[k].toLowerCase()}`}
+                  {k === 'name' ? SORT_LABELS[k] : `${sortName}: ${SORT_LABELS[k].toLowerCase()}`}
                 </option>
               ))}
             </select>
@@ -129,13 +148,14 @@ export function VillageList({ villages, variableKey, scale, selectedId, onSelect
       ) : (
         <ol className="village-rows">
           {rows.map((v) => {
-            const value = v.variables[variableKey]?.value
+            const value = metricValue(v.variables[variableKey], metric)
             return (
               <VillageRow
                 key={v.panchayat_id}
                 village={v}
                 variableKey={variableKey}
-                color={value !== undefined ? scale.color(value) : undefined}
+                metric={metric}
+                color={Number.isFinite(value) ? scale.color(value) : undefined}
                 selected={v.panchayat_id === selectedId}
                 onSelect={onSelect}
               />

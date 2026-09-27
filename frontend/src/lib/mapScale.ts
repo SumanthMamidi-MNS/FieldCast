@@ -6,10 +6,17 @@
 import type { PanchayatForecast } from '../types/api'
 import { buildScale, isDiverging, relativeDomain, type ColorScale, type RelativeDomain } from './colorScale'
 import { VARIABLES, type VariableKey } from './variables'
+import { chanceDomain, metricValues, rainMapMode, type MapMetric } from './valueSource'
 
 export interface BlockScale {
   scale: ColorScale
   domain: RelativeDomain
+  /**
+   * What the scale measures: the variable's value, or (rain served from the
+   * block) the chance of rain in percent. Colour every surface with
+   * `scale.color(metricValue(variable, metric))`.
+   */
+  metric: MapMetric
 }
 
 /** Village values for one variable, skipping villages that lack it. */
@@ -33,10 +40,15 @@ export function blockValueOf(panchayats: PanchayatForecast[], key: VariableKey):
 
 export function blockScale(panchayats: PanchayatForecast[], key: VariableKey): BlockScale {
   const meta = VARIABLES[key]
+  const metric = rainMapMode(panchayats, key)
+  if (metric === 'chance') {
+    const domain = chanceDomain(metricValues(panchayats, key, 'chance'))
+    return { scale: buildScale('sequential-blue', domain), domain, metric }
+  }
   const domain = relativeDomain(valuesOf(panchayats, key), blockValueOf(panchayats, key), {
     diverging: isDiverging(meta.scale),
     minReach: meta.resolution,
     ...(meta.dryBelow !== undefined ? { dryBelow: meta.dryBelow } : {}),
   })
-  return { scale: buildScale(meta.scale, domain), domain }
+  return { scale: buildScale(meta.scale, domain), domain, metric }
 }

@@ -198,3 +198,21 @@ export function calibratedOn1958(r: EvaluationReport): boolean {
     (c.periods ?? []).some(([start]) => typeof start === 'string' && start.startsWith('1958')),
   )
 }
+
+/**
+ * The plain sentence shown beside a row whose point value the API serves from
+ * the official block value (`point_is_block`), or null for model-served rows.
+ * Scores the report does not carry are left out rather than guessed.
+ */
+export function blockServedNote(row: EvaluationRow): { lead: string; rest: string } | null {
+  if (row.point_is_block !== true) return null
+  const val = row.validation_served_skill
+  const raw = row.raw_model_skill_vs_naive
+  const scored = typeof val === 'number' && Number.isFinite(val)
+  const lead = scored
+    ? `Block value served: the model scored ${formatSkill(val)} on validation, so FieldCast serves the official value (skill 0 by design).`
+    : 'Block value served: the model did not beat the block value on validation, so FieldCast serves the official value (skill 0 by design).'
+  const rest =
+    typeof raw === 'number' && Number.isFinite(raw) ? `The model alone scored ${formatSkill(raw)} on the test data.` : ''
+  return { lead, rest }
+}

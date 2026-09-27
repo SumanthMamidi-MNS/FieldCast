@@ -11,6 +11,7 @@ import type { ColorScale } from '../../lib/colorScale'
 import { formatLongDate } from '../../lib/dates'
 import { formatUnitCount } from '../../lib/format'
 import type { BlockScale } from '../../lib/mapScale'
+import type { MapMetric } from '../../lib/valueSource'
 import { variableMeta, type VariableKey } from '../../lib/variables'
 import { TextureSwatch } from '../common/TextureSwatch'
 import { AdviceRollup } from './AdviceRollup'
@@ -24,6 +25,8 @@ interface BlockSummaryProps {
   onVariable: (key: VariableKey) => void
   scales: Partial<Record<VariableKey, BlockScale>>
   scale: ColorScale
+  /** What the active scale measures, so the list shows and sorts the map's quantity. */
+  metric: MapMetric
   selectedId: string | null
   onSelect: (id: string) => void
 }
@@ -38,6 +41,7 @@ export function BlockSummary({
   onVariable,
   scales,
   scale,
+  metric,
   selectedId,
   onSelect,
 }: BlockSummaryProps) {
@@ -121,6 +125,7 @@ export function BlockSummary({
         villages={panchayats}
         variableKey={variableKey}
         scale={scale}
+        metric={metric}
         selectedId={selectedId}
         onSelect={onSelect}
       />

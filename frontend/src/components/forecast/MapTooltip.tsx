@@ -2,6 +2,7 @@ import { forwardRef } from 'react'
 import type { PanchayatForecast } from '../../types/api'
 import type { ColorScale } from '../../lib/colorScale'
 import { deltaClass, formatDelta, formatPercent, formatValue } from '../../lib/format'
+import { chancePct, formatMetric, isBlockSourced, type MapMetric } from '../../lib/valueSource'
 import type { VariableKey } from '../../lib/variables'
 import { SupportChip } from '../common/TextureSwatch'
 import { UnitTag } from '../common/UnitTag'
@@ -10,6 +11,7 @@ interface MapTooltipProps {
   forecast: PanchayatForecast | null
   variableKey: VariableKey
   scale: ColorScale
+  metric: MapMetric
 }
 
 /**
@@ -19,7 +21,7 @@ interface MapTooltipProps {
  * users get the same facts from the panchayat list.
  */
 export const MapTooltip = forwardRef<HTMLDivElement, MapTooltipProps>(function MapTooltip(
-  { forecast, variableKey, scale },
+  { forecast, variableKey, scale, metric },
   ref,
 ) {
   const v = forecast?.variables[variableKey]
@@ -30,14 +32,30 @@ export const MapTooltip = forwardRef<HTMLDivElement, MapTooltipProps>(function M
           <p className="map-tooltip-name">
             {forecast.panchayat_name} <UnitTag unitType={forecast.unit_type} />
           </p>
-          {v ? (
+          {v && metric === 'chance' ? (
+            <>
+              <p className="map-tooltip-value">
+                <span className="swatch-dot" style={{ background: scale.color(chancePct(v)) }} />
+                <strong className="num">{formatMetric(chancePct(v), variableKey, 'chance')}</strong>
+                <span className="map-tooltip-unit">chance of rain</span>
+              </p>
+              <p className="map-tooltip-sub num">
+                Amount {formatValue(v.value, variableKey, v.unit)}, the block forecast
+              </p>
+              <SupportChip support={v.confidence.support} label={v.confidence.support_label} />
+            </>
+          ) : v ? (
             <>
               <p className="map-tooltip-value">
                 <span className="swatch-dot" style={{ background: scale.color(v.value) }} />
                 <strong className="num">{formatValue(v.value, variableKey, v.unit)}</strong>
-                <span className={`delta num${deltaClass(v.value, v.block_value, variableKey)}`}>
-                  {formatDelta(v.value, v.block_value, variableKey, v.unit)} vs block
-                </span>
+                {isBlockSourced(v) ? (
+                  <span className="map-tooltip-unit">block value</span>
+                ) : (
+                  <span className={`delta num${deltaClass(v.value, v.block_value, variableKey)}`}>
+                    {formatDelta(v.value, v.block_value, variableKey, v.unit)} vs block
+                  </span>
+                )}
               </p>
               {v.rain_probability !== null && (
                 <p className="map-tooltip-sub num">{formatPercent(v.rain_probability)} chance of rain</p>
