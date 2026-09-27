@@ -1,6 +1,9 @@
 /* App frame: top bar, page containers, banners. */
 
+/* Positioned so absolute descendants resolve against the app, not the initial
+   containing block (which would let them grow the document past the frame). */
 .app {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -12,6 +15,13 @@
   .app.route-forecast {
     height: 100vh;
     height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* Safety net: the document itself never scrolls there. `useHashRoute` sets the class. */
+  html.route-forecast,
+  html.route-forecast body {
+    height: 100%;
     overflow: hidden;
   }
 }

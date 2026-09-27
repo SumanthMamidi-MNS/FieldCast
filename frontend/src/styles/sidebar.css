@@ -316,6 +316,13 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* On a phone the document scrolls, so stick below the sticky top bar, not under it. */
+@media (max-width: 767px) {
+  .village-list-head {
+    top: var(--topbar-h);
+  }
+}
+
 .village-tools {
   display: flex;
   gap: var(--sp-2);

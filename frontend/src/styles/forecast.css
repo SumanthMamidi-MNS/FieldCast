@@ -42,7 +42,9 @@
   inset: 0;
 }
 
+/* Positioned so it is the containing block for absolute descendants and clips them. */
 .sidebar {
+  position: relative;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;

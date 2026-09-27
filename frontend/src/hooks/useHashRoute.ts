@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { parseRoute, type Route } from '../lib/route'
+import { applyRouteClass, parseRoute, type Route } from '../lib/route'
 
 /** Current page from `location.hash`, updated on back/forward and link clicks. */
 export function useHashRoute(): Route {
@@ -14,6 +14,12 @@ export function useHashRoute(): Route {
     window.addEventListener('hashchange', onChange)
     return () => window.removeEventListener('hashchange', onChange)
   }, [])
+
+  // Mirror the route on <html> so the desktop forecast can lock document scroll.
+  useEffect(() => {
+    const root = document.documentElement
+    root.className = applyRouteClass(Array.from(root.classList), route).join(' ')
+  }, [route])
 
   return route
 }
