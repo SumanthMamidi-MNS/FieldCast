@@ -19,7 +19,7 @@ the input to Round 2.
 - [x] Rain-shadow profile features (upwind barrier, downwind rise, upwind max elevation)
 - [x] Real coastline distance (Natural Earth) instead of a west-coast table
 - [x] Whole-year seasons (monsoon + dry) with season-based holdouts → no out-of-season penalty
-- [x] Historical gauge test design: ~100 gauges per state in 1958-61 (calibration 1958-59, test 1960-61)
+- [x] Historical gauge test design: ~100 gauges per state (calibration 1958, test 1960)
 - [x] Real gram panchayats from LGD when the export is present (code + tests)
 - [x] LGD exports received: 8,072 (MH) and 1,730 (KA) real gram panchayats, 94% / 96% of villages matched
 - [~] Weather history fetch, value-ordered (test → recent → 1958/1960 gauges → 2019-20); resumes itself
