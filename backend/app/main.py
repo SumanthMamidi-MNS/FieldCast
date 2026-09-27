@@ -17,6 +17,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -39,6 +40,10 @@ app = FastAPI(
         "Every value carries a predictive interval, a validation tier, and a support label."
     ),
 )
+
+# A 250-panchayat forecast is ~1 MB of JSON; compressed it is a fraction of that,
+# which matters on the mobile connections extension officers actually use.
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 _cors = os.environ.get("CORS_ORIGINS")
 if _cors:

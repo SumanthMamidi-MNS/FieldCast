@@ -375,3 +375,13 @@ def test_regions_report_replay_windows_from_the_bundle(served):
     mh = next(r for r in body if r["key"] == REGION)
     assert mh["replay_windows"] == [["2023-07-15", "2023-07-16"]]
     assert mh["live_days_ahead"] == 15
+
+
+def test_large_responses_are_gzip_compressed(served):
+    r = TestClient(main.app).get(
+        f"/api/blocks/{BLOCK}/forecast",
+        params={"date": "2023-07-15"},
+        headers={"Accept-Encoding": "gzip"},
+    )
+    assert r.status_code == 200
+    assert r.headers.get("content-encoding") == "gzip"
