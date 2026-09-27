@@ -1,13 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <defs>
-    <clipPath id="d">
-      <path d="M16 2.5C16 2.5 5.5 14.2 5.5 20.4a10.5 10.5 0 0 0 21 0C26.5 14.2 16 2.5 16 2.5Z"/>
-    </clipPath>
-  </defs>
-  <path d="M16 2.5C16 2.5 5.5 14.2 5.5 20.4a10.5 10.5 0 0 0 21 0C26.5 14.2 16 2.5 16 2.5Z" fill="#0f5a4f"/>
-  <g clip-path="url(#d)" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round">
-    <path d="M3 19.2Q16 13.4 29 19.2"/>
-    <path d="M3 25Q16 19 29 25"/>
-  </g>
-  <circle cx="16" cy="10.6" r="2.2" fill="#e39a4a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none">
+  <!-- Outer 270° Downscaling Aperture Arc -->
+  <path d="M8 8 C12.5 3.5 20.5 3.5 25 8 C29.5 12.5 29.5 20.5 25 25 C20.5 29.5 12.5 29.5 8 25" stroke="#0a3b34" stroke-width="3" stroke-linecap="round"/>
+  <!-- Inner Downscale Focal Arc -->
+  <path d="M11 11 C14 8 19 8 22 11 C25 14 25 19 22 22" stroke="#10b981" stroke-width="3.2" stroke-linecap="round"/>
+  <!-- Central Panchayat Beacon -->
+  <circle cx="16.5" cy="16.5" r="3.2" fill="#f59e0b"/>
 </svg>

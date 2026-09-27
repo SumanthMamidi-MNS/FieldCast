@@ -1,41 +1,44 @@
-import { useId } from 'react'
-
 /**
- * The FieldCast mark: a raindrop holding two curved field furrows, with a warm
- * pin-head dot where the village sits. Drawn on a 32-unit grid with strokes
- * thick enough to survive at 16 px (the favicon is the same drawing).
+ * The FieldCast mark: The Downscale Lens Aperture (Option 8.2).
+ * Designed for high-contrast circular GitHub avatars, favicons, and dashboards:
+ * an outer atmospheric aperture boundary curving inward into a localized micro-climate
+ * focal arc, locked onto the central panchayat beacon.
  */
 export function LogoMark({ size = 28, title }: { size?: number; title?: string }) {
-  const clip = useId()
-  const drop =
-    'M16 2.5C16 2.5 5.5 14.2 5.5 20.4a10.5 10.5 0 0 0 21 0C26.5 14.2 16 2.5 16 2.5Z'
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 32 32"
+      fill="none"
       role={title ? 'img' : undefined}
       aria-hidden={title ? undefined : true}
       aria-label={title}
       focusable="false"
+      className="logo-mark"
+      xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        <clipPath id={clip}>
-          <path d={drop} />
-        </clipPath>
-      </defs>
-      <path d={drop} fill="var(--brand-700)" />
-      <g
-        clipPath={`url(#${clip})`}
-        fill="none"
-        stroke="#fff"
-        strokeWidth="2.4"
+      {/* Outer 270° Downscaling Aperture Arc */}
+      <path
+        d="M8 8 C12.5 3.5 20.5 3.5 25 8 C29.5 12.5 29.5 20.5 25 25 C20.5 29.5 12.5 29.5 8 25"
+        stroke="var(--brand-900, #0a3b34)"
+        strokeWidth="2.6"
         strokeLinecap="round"
-      >
-        <path d="M3 19.2Q16 13.4 29 19.2" />
-        <path d="M3 25Q16 19 29 25" />
-      </g>
-      <circle cx="16" cy="10.6" r="2.2" fill="#e39a4a" />
+      />
+      {/* Inner Downscale Focal Arc */}
+      <path
+        d="M11 11 C14 8 19 8 22 11 C25 14 25 19 22 22"
+        stroke="#10b981"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+      {/* Central Panchayat Beacon */}
+      <circle
+        cx="16.5"
+        cy="16.5"
+        r="3"
+        fill="#f59e0b"
+      />
     </svg>
   )
 }
@@ -46,7 +49,10 @@ export function Logo({ tagline = false }: { tagline?: boolean }) {
     <span className="logo">
       <LogoMark size={30} />
       <span className="logo-text">
-        <span className="logo-name">FieldCast</span>
+        <span className="logo-name">
+          <span className="logo-name-base">Field</span>
+          <span className="logo-name-accent">Cast</span>
+        </span>
         {tagline && <span className="logo-tagline">Village-level weather, with honest confidence</span>}
       </span>
     </span>

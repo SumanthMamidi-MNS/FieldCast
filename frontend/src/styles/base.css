@@ -50,7 +50,17 @@ code {
   font-size: 1.0625rem;
   font-weight: var(--fw-bold);
   letter-spacing: -0.02em;
-  color: var(--brand-900);
+  color: var(--gray-900);
+}
+
+.logo-name-base {
+  color: var(--gray-900);
+}
+
+.logo-name-accent {
+  /* Emerald, the hue of the mark's inner arc; 5.5:1 on white. */
+  color: #047857;
+  font-weight: var(--fw-bold);
 }
 
 .logo-tagline {
