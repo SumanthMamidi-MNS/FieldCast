@@ -101,8 +101,12 @@ Types in `types/api.ts` mirror `backend/app/schemas.py` field for field.
   - Temperature, humidity, wind: diverging scale centred on the **block value**,
     domain fitted to the block, with a per-variable minimum reach so rounding
     noise is not painted as a real difference.
-  - Rain: sequential blues from 0 when any panchayat is dry (<0.5 mm); when all
-    are wet, fitted to the panchayats' own range, and the legend says so.
+  - Rain: when the API serves rain amounts from the block (`value_source:
+    "block"`, today's case), the Rain view maps the **chance of rain** instead,
+    on a block-fitted blue scale, because a uniform amount map would hide the one
+    village-level rain signal (`lib/valueSource.ts`, `rainMapMode()`). When rain
+    amounts come from the model it maps amounts: from 0 if any panchayat is dry,
+    otherwise fitted to the panchayats' own range.
   - Never a rainbow; diverging ramps chosen to survive colour blindness.
 - **Texture = confidence** (`lib/confidenceTexture.ts`, `lib/mapPatterns.ts`):
   well supported = plain fill, moderate = dots, low = hatching + dashed outline.
@@ -139,7 +143,10 @@ Types in `types/api.ts` mirror `backend/app/schemas.py` field for field.
 2. **Weather for this panchayat** (`VariableCard.tsx`, `lib/intervalBand.ts`):
    the value, its likely range (8 days in 10) as a band, the block value marked
    on the same scale, and a plain verdict ("within the uncertainty: treat as the
-   same as the block"). Rain shows the chance of rain separately from the amount.
+   same as the block"). **Rain is two linked statements**: "X% chance of rain
+   (2.5 mm or more)" and "If it rains: about L–U mm" (`range_basis: "if_rain"`),
+   with the block amount marked for reference. A value served from the block
+   (`value_source: "block"`) shows a "Block value" tag and a note explaining why.
 3. **How sure are we?** (`ConfidencePanel.tsx`): support level in words, distance
    to the nearest real gauge, support score, evidence tier, and the backend's
    uncertainty statement (always visible, never behind a toggle).
@@ -164,7 +171,9 @@ API's reason and a one-click way back to a valid day.
 block copy as a dot with a 90% CI whisker on a shared axis (`SkillChart.tsx`),
 interval coverage against the 80% target, rain-occurrence Brier scores, the real
 gauges (modern and the ~100-gauge 1960 test), and the transfer test. Losses are
-shown as prominently as wins; missing tiers say "Not available yet".
+shown as prominently as wins; missing tiers say "Not available yet". Where a
+variable is served from the block value, a note gives the model's own validation
+and test skill and explains why the official value is served.
 
 **How it works** (`components/about/`) explains the method in plain language:
 the terrain diagram (windward vs rain shadow, the upwind ridge), real gram
@@ -205,12 +214,13 @@ value − block always adds up on screen. Units are called **gram panchayats**
   labels drawn on demand, lazy-loaded pages → interactions around 80 ms. The main
   bundle is ~72 kB gzipped; MapLibre is a separate cached chunk.
 
-## 11. Tests (`npm test`, ~150 tests)
+## 11. Tests (`npm test`, ~180 tests)
 
 Pure logic is tested, not snapshots: colour scales and relative domains,
 confidence textures, interval-band geometry, date windows and hints, number
 formatting and deltas, block summary roll-ups, list search/sort, bulletin
-validation, evidence classification, map bounds/label ordering, route classes.
+validation, evidence classification, map bounds/label ordering, route classes,
+rain map mode and value-source notes, if-it-rains bands and wording.
 
 ## 12. Run, build, deploy
 
