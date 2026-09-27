@@ -38,6 +38,7 @@ def finalize_variable(
     scale_factor: float | None = None,
     point_is_block: bool = False,
     block_value: np.ndarray | None = None,
+    bounds: tuple[float, float] | None = None,
 ) -> dict:
     """Served median, interval, occurrence and support for one variable.
 
@@ -100,6 +101,11 @@ def finalize_variable(
         upper = np.maximum(upper, median)
     if reconcile_mode == "multiplicative":
         lower, median, upper = clamp_non_negative(lower, median, upper)
+    if bounds is not None:
+        # Widening can push a range past what is physically possible
+        # (humidity above 100%); publish only possible values.
+        lo_b, hi_b = bounds
+        lower, median, upper = (np.clip(a, lo_b, hi_b) for a in (lower, median, upper))
     if range_basis == "if_rain":
         # "If it rains" means a rainy day (>= the IMD threshold) by definition.
         lower = np.maximum(lower, WET_DAY_THRESHOLD_MM)

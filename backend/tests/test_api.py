@@ -410,3 +410,18 @@ def test_if_rain_range_starts_at_the_rainy_day_threshold(served):
     resp = served.forecast(BLOCK, date(2023, 7, 15), {**INPUT, "precip": 1.0})
     for p in resp.panchayats:
         assert p.variables["precip"].confidence.lower >= WET_DAY_THRESHOLD_MM
+
+
+def test_humidity_never_published_outside_0_to_100(served):
+    resp = served.forecast(BLOCK, date(2023, 7, 15), {**INPUT, "humidity": 99.0})
+    for p in resp.panchayats:
+        c = p.variables["humidity"].confidence
+        assert 0.0 <= c.lower <= c.upper <= 100.0
+        assert 0.0 <= p.variables["humidity"].value <= 100.0
+
+
+def test_rain_uncertainty_statement_speaks_of_if_it_rains(served):
+    resp = served.forecast(BLOCK, date(2023, 7, 15), INPUT)
+    text = resp.panchayats[0].advisory.uncertainty_statement
+    assert "if it rains" in text
+    assert "anywhere between" not in text

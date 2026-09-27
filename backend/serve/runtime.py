@@ -337,6 +337,7 @@ class RegionRuntime:
             reconcile_to=reconcile_to,
             scale_factor=model.scale_factor,
             point_is_block=model.point_is_block,
+            bounds=VARIABLES[key].bounds,
             block_value=np.full(n, block_value),
         )
 

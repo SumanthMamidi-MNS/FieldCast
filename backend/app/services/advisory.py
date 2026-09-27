@@ -357,7 +357,14 @@ def _uncertainty_statement(
 
     if rain is not None:
         lo, hi = rain.confidence.lower, rain.confidence.upper
-        base += f" Rainfall could plausibly fall anywhere between {lo:.0f} and {hi:.0f} mm."
+        if rain.range_basis == "if_rain":
+            chance = rain.rain_probability if rain.rain_probability is not None else 0.0
+            base += (
+                f" There is a {chance:.0%} chance of rain here; if it rains, the amount is "
+                f"likely between {lo:.0f} and {hi:.0f} mm."
+            )
+        else:
+            base += f" Rainfall could plausibly fall anywhere between {lo:.0f} and {hi:.0f} mm."
 
     if tier == "T3":
         base += (

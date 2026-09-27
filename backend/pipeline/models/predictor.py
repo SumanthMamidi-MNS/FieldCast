@@ -185,5 +185,6 @@ class Predictor:
             reconcile_to=reconcile_to,
             scale_factor=float(calib["factor"]) if calib is not None else None,
             point_is_block=bool(self.policy.get(key, {}).get("point_is_block", False)),
+            bounds=VARIABLES[key].bounds,
             block_value=block_value,
         )

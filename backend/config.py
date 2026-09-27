@@ -96,6 +96,8 @@ class Variable:
     # Governs both block-mean reconciliation and the anomaly definition.
     reconcile: str
     two_stage: bool = False       # rainfall only: occurrence + amount
+    # Physical limits for published values and ranges (e.g. humidity 0-100%).
+    bounds: tuple[float, float] | None = None
     ghcn_scale: float = 1.0       # GHCN stores tenths; converts to our unit
 
 
@@ -135,6 +137,7 @@ VARIABLES: dict[str, Variable] = {
         unit="%",
         label="Relative humidity",
         reconcile="additive",
+        bounds=(0.0, 100.0),
     ),
     "wind": Variable(
         key="wind",
