@@ -1,135 +1,140 @@
-# Panchayat-Level Weather Downscaling (SIH26074)
+# FieldCast
 
-Downscales block-level weather forecasts to **panchayat level** for
-agro-meteorological advisories. Every value carries a **predictive interval**, a
-**validation tier**, and a **plain-language confidence label**. The advice
-becomes more cautious where the system knows less.
+**Village-level weather, with honest confidence.**
+FieldCast (SIH26074) downscales block-level weather forecasts to **gram-panchayat
+level** for agro-meteorological advisories. Every value carries a **predictive
+range**, a **validation tier** and a **plain-language confidence label**, and the
+farm advice becomes more cautious where the system knows less.
 
-> Pilot: 7 districts of Maharashtra across the Western Ghats (coastal Raigad → Ghats
-> crest → Marathwada rain shadow). 86 blocks, 1,955 panchayat-proxy units built from
-> 11,740 real village boundaries.
+| | Maharashtra (pilot) | Karnataka |
+|---|---|---|
+| Districts | Pune, Satara, Ahmadnagar, Nashik, Raigad, Kolhapur, Sangli | Belagavi, Dharwad, Uttara Kannada, Shivamogga, Chikkamagaluru, Hassan |
+| Blocks | 86 | 48 |
+| Villages | 11,740 | 7,999 |
+| Units served | **8,072 real gram panchayats** + 138 village clusters | **1,730 real gram panchayats** + 63 village clusters |
+
+Gram-panchayat boundaries are built by joining real village polygons to the
+Government of India's Local Government Directory (LGD) by census village code:
+94% of Maharashtra and 96% of Karnataka villages match exactly. The rest fall
+back to small village clusters, labelled as such in the app.
 
 ---
 
 ## Why this is not an interpolation problem
 
 Standard downscaling assumes the fine field is a smooth function of the coarse
-one. Rainfall is not smooth: a windward slope can get a downpour while the leeward
-village a few km away stays dry. Real panchayat-scale ground truth barely exists.
-So the design goal is **the panchayat value *and* how far to trust it**.
+one. Rainfall is not smooth: across the Western Ghats a windward slope can get a
+downpour while a leeward village a few km away stays dry. And panchayat-scale
+ground truth barely exists. So the design goal is **the panchayat value *and* how
+far to trust it**.
 
 | Design choice | Why |
 |---|---|
-| Predict the **anomaly** from the block value, not the absolute value | The system can only refine the official forecast; if it learns nothing, it degrades exactly to "copy the block value" |
-| **Two-stage rainfall** (calibrated wet/dry classifier + amount quantiles) | A single regressor smears drizzle over every panchayat; two stages allow "dry here, wet next door" |
-| **Monsoon exposure** covariate (slope aspect against the 245° SW monsoon flow) | Separates windward from rain-shadow slopes, which elevation alone cannot |
-| **Epistemic support score** (terrain similarity to training data + distance to a real gauge) | Tree models extrapolate with false confidence; low support widens the interval and downgrades the advice |
-| **Block-mean reconciliation** | The area-weighted panchayat mean always equals the official block value, so the agency's own forecast is never contradicted |
-| **Asymmetric-cost advisories** | Under low confidence, irreversible operations (spraying, fertiliser, harvest) move from *proceed* to *caution*, never the reverse |
+| Predict the **anomaly** from the block value | The system can only refine the official forecast; if it learns nothing it degrades exactly to "copy the block value" |
+| **Rain-shadow terrain features**: the ridge height upwind along the 245° monsoon flow, and the rise ahead | The rain shadow is caused by the ridge upwind of a village, not its local slope |
+| **Two-stage rainfall**: calibrated rainy-day classifier (IMD ≥2.5 mm) + amount ranges | One regressor smears drizzle everywhere; two stages allow "dry here, wet next door" |
+| **Block-mean reconciliation** (rain reconciled in expectation) | The area-weighted panchayat mean always equals the official block value |
+| **Epistemic support** (terrain similarity to training data + distance to a gauge) | Tree models extrapolate with false confidence; low support widens the range and downgrades the advice |
+| **Gauge-calibrated ranges** | The 80% range is widened so that it covers ~80% of real rain-gauge observations |
+| **Asymmetric-cost advice** | Under low confidence, irreversible operations (spraying, fertiliser, harvest) move from *go ahead* to *take care*, never the reverse |
 
 ## What is validated and what is inferred
 
 | Tier | Claim | Evidence |
 |---|---|---|
-| **T1** | Block → ~16 km grid | Held-out 2023 monsoon, dense ERA5 truth, whole blocks held out |
-| **T2** | → real gauge | 9 GHCN rain gauges never used in training |
-| **T3** | → panchayat | **Not validated**: no panchayat-scale truth exists. Physically-informed inference; interval inflated ×1.35 and labelled as such in every response |
+| **T1** | Block → ~16 km grid | Held-out 2022-23 dry season and 2023 monsoon; whole blocks held out |
+| **T2** | → real rain gauge | NOAA GHCN gauges never used in training: 4 modern gauges, and ~100 per state in the 1960 monsoon |
+| **T3** | → gram panchayat | **Not validated**: no panchayat-scale truth exists. Terrain-informed inference, gauge-calibrated range, labelled in every response |
 
 ## Results
 
 Skill = 1 − MAE(model) / MAE(naive block copy); positive beats naive. 90% CIs are
-cluster bootstraps over blocks (T1) or gauges (T2). Full tables:
-`reports/evaluation_mh_ghats.md` and `reports/evaluation_ka_transfer_from_mh_ghats.md`.
+cluster bootstraps over blocks (T1) or gauges (T2); no result is called
+significant with fewer than 8 gauges. Full tables in `reports/`.
 
-**Maharashtra, held-out 2023 monsoon (T1, 37,210 cell-days, 86 blocks)**
+_Results are regenerated by `python -m backend.pipeline.evaluate.run`; see the
+reports for the numbers behind the served models._
 
-| Variable | Skill vs naive | 90% CI | vs lapse-rate | 80%-interval coverage |
-|---|---:|---|---:|---:|
-| Max temperature | **+0.46** | [0.41, 0.49] | +0.22 | 0.88 |
-| Min temperature | **+0.62** | [0.57, 0.67] | +0.32 | 0.88 |
-| Humidity | +0.18 | [0.15, 0.20] | – | 0.89 |
-| Wind | +0.14 | [0.11, 0.16] | – | 0.94 |
-| Rainfall amount | +0.06 (served: +0.02) | [−0.03, 0.14]: **not significant** | – | 0.71 |
-| Rain occurrence (≥2.5 mm) | Brier **0.058** vs 0.096 naive | | | |
-
-**Real gauges (T2, 2023, never used in training; only 4 gauges, so significance is not testable)**
-
-| Variable | Skill vs naive | vs lapse-rate | Coverage |
-|---|---:|---:|---:|
-| Max temperature | +0.54 | **−0.08 (loses)** | 0.90 |
-| Min temperature | +0.43 | **−0.25 (loses)** | 0.82 |
-| Rainfall amount | +0.04 | – | 0.74 |
-| Rain occurrence | Brier **0.190** vs 0.265 naive (28% better) | | |
-
-**Transfer to Karnataka (models never saw it)**
-
-Rain occurrence and temperature transfer (occurrence Brier 0.079 vs 0.110 naive;
-Tmax +0.21, Tmin +0.37). **Rainfall amount does not: it is 18–25% worse than
-naive.** The API therefore serves only regions with their own trained models.
-
-### What this means in plain terms
-
-- **Strongest result:** the *rain / no-rain* call per panchayat, which drives
-  spraying and harvest advice, is clearly better than the block forecast. This
-  holds at real gauges and in a region the model never saw.
-- **Temperature** refinement is large and real on the grid, but at point gauges a
-  simple elevation (lapse-rate) correction does as well. The model adds little
-  beyond physics there.
-- **Rainfall amounts** are not reliably better than the block value. The system
-  shows them with wide intervals and says so rather than implying precision.
-- **Intervals** were calibrated on 2022 gauge-days and checked on 2023: gauge
-  coverage is 0.74–0.90 against a 0.80 target.
-
-## Running it
+## Running it locally
 
 ```bash
-python -m venv .venv && .venv/Scripts/python -m pip install -e ".[dev]"
-cd frontend && npm install && cd ..
+python -m venv .venv
+.venv/Scripts/python -m pip install -e ".[serve,pipeline,dev]"
+cd frontend && npm install && npm run build && cd ..
+.venv/Scripts/python -m uvicorn backend.app.main:app --port 8000
 ```
 
-Build data, train, and evaluate. This needs the network the first time; everything is cached after that:
+Open http://localhost:8000: the one process serves the API and the dashboard.
+For frontend development, run `npm run dev` in `frontend/` (http://localhost:5173,
+proxying `/api` to port 8000). With `DOWNSCALE_OFFLINE=1` the app runs without a
+network for replay dates and officer-supplied bulletins.
+
+### Rebuilding the data and models (pipeline)
 
 ```bash
+# 1. Blocks, gram-panchayat units, gauge index. Put the LGD
+#    "Village To Gram Panchayat Mapping" exports in data/raw/lgd/ first.
 python -m backend.pipeline.build_base --region mh_ghats
-python -m backend.pipeline.train --region mh_ghats
+# 2. Weather history: multi-day on the free Open-Meteo tier; resumes itself.
+python -m backend.pipeline.fetch --region mh_ghats --region ka_ghats
+# 3. Train (optionally on whatever history is complete so far).
+python -m backend.pipeline.train --region mh_ghats --available-only
+# 4. Evaluate: T1, modern gauges, historical gauges, calibration.
 python -m backend.pipeline.evaluate.run --region mh_ghats
+python -m backend.pipeline.evaluate.run --region ka_ghats --model-region mh_ghats  # transfer test
+# 5. Export the serving bundle the API reads, then commit it.
+python -m backend.serve.export --region mh_ghats --region ka_ghats
 ```
 
-Serve:
+## Deploying on Vercel
 
-```bash
-uvicorn backend.app.main:app --port 8000
-cd frontend && npm run dev          # http://localhost:5173
-```
+The repository is ready for Vercel's FastAPI preset; no Docker.
 
-Offline (after one warm run): set `DOWNSCALE_OFFLINE=1`.
+1. Push the branch to GitHub and import the repository in Vercel (or run `vercel`
+   from the repository root).
+2. Keep the project root at the repository root. Vercel then:
+   - builds the dashboard with the `buildCommand` in `vercel.json`
+     (`cd frontend && npm ci && npm run build`);
+   - installs only the runtime dependencies from `pyproject.toml` (FastAPI,
+     pydantic, httpx, numpy: about 83 MB);
+   - loads the app from `[tool.vercel] entrypoint = "backend.app.main:app"` and
+     serves the built dashboard from its CDN.
+3. The API reads the committed `serve_bundle/`; training data and models are
+   never uploaded (`.vercelignore`).
 
-### API
+To update a deployment after retraining, re-export the bundle, commit it and
+redeploy.
+
+## API
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/blocks` | Blocks with panchayat counts |
-| `GET /api/blocks/{id}/panchayats` | Panchayat outlines (GeoJSON) |
-| `GET /api/blocks/{id}/forecast?date=` | Downscaled forecast: historical replay (Jun–Sep 2022/2023) or live (yesterday to +15 days) |
+| `GET /api/regions` | Regions, whether each is served, and the dates that can be replayed |
+| `GET /api/blocks?region=` | Blocks with unit counts |
+| `GET /api/blocks/{id}/panchayats` | Gram-panchayat outlines (GeoJSON) |
+| `GET /api/blocks/{id}/forecast?date=` | Forecast for a replay date, or live from yesterday to +15 days |
 | `POST /api/blocks/{id}/forecast` | Downscale an **official block forecast you supply** (e.g. an IMD bulletin) |
-| `GET /api/evaluation` | Model vs naive skill table |
+| `GET /api/evaluation`, `/api/evaluation/reports` | Skill tables and full evaluation reports |
 
 ## Data (all public, no API keys)
 
-Open-Meteo (ERA5 reanalysis blend, forecast, elevation) · GADM 4.1 (blocks) ·
-datameet village boundaries · NOAA GHCN-Daily (gauges).
+Open-Meteo (ERA5 reanalysis blend, forecasts) · AWS Terrain Tiles (elevation) ·
+Natural Earth (coastline) · GADM 4.1 (blocks) · datameet (village polygons) ·
+LGD (village → gram panchayat) · NOAA GHCN-Daily (rain gauges).
 
 ## Limitations, stated plainly
 
-1. Panchayat-scale (T3) values are inference, not measurement.
-2. Panchayat units are clusters of ~6 real villages, not official panchayat boundaries.
-3. Training targets come from a reanalysis, not an IMD operational product.
-   The API accepts IMD block values as input, but the model was not trained on them.
-4. Only 9 recent quality-screened gauges exist in the region, so gauge results carry wide confidence intervals.
-5. Trained on monsoon seasons only (free API budget). Out-of-season requests are
-   served, with confidence halved and a disclosure.
-7. **Retrain per region.** In a region it was not trained on, rainfall-amount
-   output was worse than simply using the block value (Karnataka test).
-6. The distance-to-coast covariate is only valid for the peninsular west coast.
+1. Panchayat-level (T3) values are inference: no panchayat-scale measurements
+   exist to check them against.
+2. About 5% of villages could not be matched to a gram panchayat in LGD and are
+   grouped into labelled village clusters.
+3. The models learn from a reanalysis (ERA5), not an IMD operational forecast.
+   IMD block values can be supplied through the app, but were not used in training.
+4. Modern rain gauges are scarce (4 in the modelled Maharashtra blocks); the
+   ~100-gauge test uses 1960, when the reanalysis assimilated fewer observations.
+5. Each state needs its own training: in a region it was not trained on,
+   rainfall amounts were worse than the block value.
+6. Humidity and wind have no gauge validation, so their ranges use a fixed widening.
 
-See `docs/architecture.md` for the full design and `docs/decisions.md` for the rationale behind each choice.
+See `docs/architecture.md` for the design and `docs/decisions.md` for the
+reasoning behind each choice.
