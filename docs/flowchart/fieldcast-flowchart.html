@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>FieldCast — how a forecast is made</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #efeee7;
+    --ink: #1c2530;
+    --muted: #4c5561;
+    --line: #6f7780;
+    --blue-bg: #e3e9f3;   --blue-bd: #aebcd6;   --blue-ink: #29467a;
+    --sand-bg: #f4e9cf;   --sand-bd: #dcc58f;   --sand-ink: #7a5a16;
+    --green-bg: #e1efe5;  --green-bd: #a7ccb3;  --green-ink: #2d6446;
+    --red-bg: #f6e1da;    --red-bd: #e0a795;    --red-ink: #a3402a;
+    --white: #fdfdfb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--paper); color: var(--ink); font: 400 15px/1.45 Inter, system-ui, sans-serif; }
+  .poster { width: 1400px; margin: 0 auto; padding: 56px 60px 44px; }
+
+  header { text-align: center; padding-bottom: 26px; border-bottom: 2.5px solid var(--ink); margin-bottom: 34px; }
+  h1 { font: 400 104px/0.95 "DM Serif Display", Georgia, serif; letter-spacing: 3px; }
+  .sub { margin-top: 18px; font: italic 400 25px/1.3 "DM Serif Display", Georgia, serif; color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: 860px 1fr; column-gap: 44px; }
+  .flow { display: flex; flex-direction: column; align-items: stretch; }
+  .side { position: relative; }
+
+  .box { border-radius: 14px; padding: 18px 26px 18px; text-align: center; border: 1.5px solid; }
+  .box h2 { font: 400 29px/1.15 "DM Serif Display", Georgia, serif; margin-bottom: 6px; }
+  .box p { color: var(--muted); font-size: 15.5px; }
+  .blue { background: var(--blue-bg); border-color: var(--blue-bd); } .blue h2 { color: var(--blue-ink); }
+  .sand { background: var(--sand-bg); border-color: var(--sand-bd); } .sand h2 { color: var(--sand-ink); }
+  .green { background: var(--green-bg); border-color: var(--green-bd); } .green h2 { color: var(--green-ink); }
+  .gate { background: var(--white); border: 3px solid var(--ink); position: relative; }
+  .gate h2 { color: var(--ink); }
+  .final { background: var(--ink); border-color: var(--ink); } .final h2 { color: #fff; } .final p { color: #cfd6de; }
+  .tag { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff;
+         font: 700 11px/1 Inter, sans-serif; letter-spacing: 2px; padding: 6px 11px; border-radius: 5px; }
+
+  .chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0 8px; }
+  .chip { font: 500 13.5px/1 "JetBrains Mono", monospace; background: #fff; border: 1px solid var(--blue-bd);
+          color: var(--blue-ink); padding: 7px 11px; border-radius: 7px; }
+  .green .chip { border-color: var(--green-bd); color: var(--green-ink); }
+  .sand .chip { border-color: var(--sand-bd); color: var(--sand-ink); }
+
+  .subs { display: grid; gap: 12px; margin: 12px 0 10px; }
+  .subs.two { grid-template-columns: 1fr 1fr; } .subs.three { grid-template-columns: 1fr 1fr 1fr; }
+  .sub-box { background: #fff; border-radius: 9px; padding: 11px 12px; border: 1px solid rgba(0,0,0,.08); }
+  .sub-box b { display: block; font: 600 16px/1.2 Inter, sans-serif; margin-bottom: 4px; color: var(--ink); }
+  .sub-box span { font-size: 13.5px; color: var(--muted); }
+  .foot { font-size: 15px; color: var(--muted); margin-top: 4px; }
+  .foot strong { color: var(--ink); }
+
+  .arrow { height: 36px; display: flex; justify-content: center; }
+  .arrow::before { content: ""; width: 2px; background: var(--line); height: 100%; position: relative; }
+  .arrow { position: relative; }
+  .arrow::after { content: ""; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+                  border: 7px solid transparent; border-top: 9px solid var(--line); border-bottom: 0; }
+
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+
+  /* Right column */
+  .measured { margin-top: 44px; background: var(--white); border: 2px solid var(--ink); border-radius: 16px; padding: 26px 34px 20px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 40px; }
+  .measured h3 { font: 400 30px/1.1 "DM Serif Display", Georgia, serif; text-align: center; }
+  .measured .kicker { text-align: center; font: 600 11.5px/1 Inter; letter-spacing: 2.5px; color: var(--muted); margin: 8px 0 12px; }
+  .stat { display: grid; grid-template-columns: 125px 1fr; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #e3e2da; }
+  .stat .n { font: 400 42px/1 "DM Serif Display", Georgia, serif; color: var(--blue-ink); }
+  .stat .d { font-size: 14px; color: var(--ink); }
+  .stat .d small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .note { margin-top: 14px; text-align: center; font: italic 15px/1.4 "DM Serif Display", Georgia, serif; color: var(--muted); }
+
+  .stop { position: absolute; left: 0; right: 0; background: var(--red-bg); border: 1.5px solid var(--red-bd);
+          border-radius: 14px; padding: 16px 22px; text-align: center; }
+  .stop .k { font: 700 11px/1 Inter; letter-spacing: 2.5px; color: var(--red-ink); opacity: .85; }
+  .stop h4 { font: 400 26px/1.2 "DM Serif Display", Georgia, serif; color: var(--red-ink); margin: 8px 0 6px; }
+  .stop p { font-size: 14.5px; color: #5b3a31; }
+  .link { position: absolute; height: 2px; background: var(--red-ink); }
+  .link::after { content: ""; position: absolute; right: -1px; top: -6px; border: 7px solid transparent; border-left: 10px solid var(--red-ink); border-right: 0; }
+  .link em { position: absolute; top: -24px; left: 0; right: 0; text-align: center; font: italic 700 14px/1 Inter; color: var(--red-ink); }
+
+  .aside { position: absolute; left: 0; right: 0; padding-left: 16px; border-left: 3px solid var(--blue-bd); font-size: 15px; color: var(--muted); }
+  .aside strong { color: var(--blue-ink); }
+
+  footer { margin-top: 40px; border-top: 1px solid #cfcdc3; padding-top: 22px; }
+  .legend { display: flex; justify-content: center; gap: 30px; align-items: center; font-size: 15px; color: var(--muted); }
+  .legend .lbl { font: 700 12px/1 Inter; letter-spacing: 2.5px; color: var(--muted); }
+  .sw { width: 18px; height: 18px; border-radius: 5px; display: inline-block; vertical-align: -3px; margin-right: 8px; border: 1.5px solid; }
+  .closing { margin-top: 26px; padding-top: 22px; border-top: 2.5px solid var(--ink); text-align: center;
+             font: 400 33px/1.2 "DM Serif Display", Georgia, serif; }
+</style>
+</head>
+<body>
+<div class="poster" id="poster">
+  <header>
+    <h1>FIELDCAST</h1>
+    <p class="sub">Block-level weather refined to every gram panchayat — with how far to trust each number</p>
+  </header>
+
+  <div class="grid">
+    <div class="flow" id="flow">
+
+      <div class="box blue" id="input">
+        <h2>The official block forecast</h2>
+        <p>one number per block, for one day</p>
+        <div class="chips"><span class="chip">officer's IMD bulletin</span><span class="chip">live forecast</span><span class="chip">past-season replay</span></div>
+      </div>
+      <div class="arrow"></div>
+
+      <div class="box sand" id="units">
+        <h2>Real gram panchayats + their terrain</h2>
+        <p><strong style="color:var(--ink)">9,802 gram panchayats</strong> built from village boundaries joined to the Government's LGD directory</p>
+        <div class="subs three">
+          <div class="sub-box"><b>Local terrain</b><span>elevation · slope · which way the slope faces the monsoon</span></div>
+          <div class="sub-box"><b>Rain-shadow profile</b><span>how high the ridge rises upwind, along the 245° monsoon flow</span></div>
+          <div class="sub-box"><b>Context</b><span>distance to the sea · to the nearest rain gauge</span></div>
+        </div>
+        <p class="foot">precomputed from free elevation tiles — no request fetches data</p>
+      </div>
+      <div class="arrow"></div>
+
+      <div class="box blue" id="model">
+        <h2>Downscaling model</h2>
+        <p>LightGBM on 20 features predicts the <strong style="color:var(--ink)">difference</strong> from the block value — never the value itself</p>
+        <div class="subs two">
+          <div class="sub-box"><b>Temperature · humidity · wind</b><span>10th / 50th / 90th percentile of the local difference</span></div>
+          <div class="sub-box"><b>Rain, in two stages</b><span>chance of a rainy day (≥2.5 mm) · amount if it rains</span></div>
+        </div>
+      </div>
+      <div class="arrow"></div>
+
+      <div class="box gate" id="reconcile">
+        <span class="tag">GATE</span>
+        <h2>Block-mean reconciliation</h2>
+        <p>panchayat values must add back up to the official block value — redistribute, never overrule</p>
+      </div>
+      <div class="arrow"></div>
+
+      <div class="box gate" id="policy">
+        <span class="tag">DECISION</span>
+        <h2>Serving policy</h2>
+        <p>did the panchayat estimate beat the block value on held-out validation blocks?</p>
+      </div>
+      <div class="arrow"></div>
+
+      <div class="box sand" id="uncert">
+        <h2>Honest uncertainty</h2>
+        <div class="subs three">
+          <div class="sub-box"><b>Support</b><span>is the terrain familiar? is a gauge near? → high · moderate · low</span></div>
+          <div class="sub-box"><b>Calibrated range</b><span>widened until ~80% of real rain-gauge readings fall inside</span></div>
+          <div class="sub-box"><b>Evidence tier</b><span>panchayat values are labelled as inference, not measurement</span></div>
+        </div>
+      </div>
+      <div class="arrow"></div>
+
+      <div class="box gate" id="advice">
+        <span class="tag">GATE</span>
+        <h2>Asymmetric-cost advice</h2>
+        <p>is confidence low for this panchayat? costly, irreversible steps need more certainty</p>
+      </div>
+      <div class="arrow"></div>
+
+      <div class="pair">
+        <div class="box green">
+          <h2>Farm advisories</h2>
+          <p>spray · irrigate · harvest · fertilise · disease watch · heavy-rain preparedness</p>
+        </div>
+        <div class="box green">
+          <h2>Evidence, in the open</h2>
+          <p>skill against the block forecast · real-gauge checks · every limitation stated</p>
+        </div>
+      </div>
+      <div class="arrow"></div>
+
+      <div class="box final">
+        <h2>Officer dashboard</h2>
+        <p>map of every gram panchayat · advice first · printable village sheet · FastAPI + React + MapLibre on Vercel</p>
+      </div>
+    </div>
+
+    <div class="side" id="side">
+      <div class="aside" data-anchor="input">
+        An officer can paste the day's <strong>IMD block bulletin</strong>; FieldCast refines that number instead of inventing its own.
+      </div>
+      <div class="aside" data-anchor="units">
+        <strong>94% of Maharashtra and 96% of Karnataka villages</strong> match LGD exactly; the rest become labelled village clusters.
+      </div>
+      <div class="aside" data-anchor="model">
+        Trained on 2019–2022 seasons, tested on later ones with <strong>whole blocks held out</strong>; a date-level check blocks any leakage.
+      </div>
+      <div class="stop" data-anchor="policy" data-label="no">
+        <div class="k">CONTROLLED STOP</div>
+        <h4>Block value served</h4>
+        <p>the official amount is shown as-is; the range and rain chance stay panchayat-specific · rain amounts today</p>
+      </div>
+      <div class="stop" data-anchor="advice" data-label="low">
+        <div class="k">CONTROLLED STOP</div>
+        <h4>Advice made more cautious</h4>
+        <p>spraying, fertiliser and harvest move from “go ahead” to “take care” — a warning is never softened</p>
+      </div>
+      <div class="aside" data-anchor="reconcile">
+        If the model learns nothing, the output is <strong>exactly the block value</strong> — the worst case is the official forecast.
+      </div>
+      <div class="aside" data-anchor="uncert">
+        Confidence comes from <strong>measured terrain familiarity and gauge distance</strong>, never from asking a model how sure it is.
+      </div>
+    </div>
+  </div>
+
+  <section class="measured" id="measured">
+    <h3>Measured, not claimed</h3>
+    <div class="kicker">EVALUATION RESULTS</div>
+    <div class="stats">
+      <div class="stat"><div class="n" data-k="rain">40%</div><div class="d">better rain / no-rain call than the block forecast<small data-k="rain-note">Brier 0.026 vs 0.043 · Maharashtra, held-out seasons</small></div></div>
+      <div class="stat"><div class="n" data-k="tmax">+0.44</div><div class="d">max-temperature skill over the block value<small data-k="tmax-note">Maharashtra · +0.42 Karnataka · 1 = perfect, 0 = no better</small></div></div>
+      <div class="stat"><div class="n" data-k="cov">80%</div><div class="d">of real rain-gauge days inside the published range<small data-k="cov-note">target 80% · calibrated and tested on separate seasons</small></div></div>
+      <div class="stat"><div class="n" data-k="gauges">~100</div><div class="d">real rain gauges per state in the historical test<small data-k="gauges-note">1960 monsoon · never used in training</small></div></div>
+      <div class="stat"><div class="n">0</div><div class="d">served numbers worse than the official forecast<small>a variable that loses on validation serves the block value</small></div></div>
+      <div class="stat"><div class="n">100 ms</div><div class="d">for a 257-panchayat block<small>numpy-only serving · 53 KB gzipped response</small></div></div>
+    </div>
+    <p class="note">Every number is reproducible from reports/ — nothing is tuned on what it is scored on.</p>
+  </section>
+
+  <footer>
+    <div class="legend">
+      <span class="lbl">LEGEND</span>
+      <span><i class="sw" style="background:var(--blue-bg);border-color:var(--blue-bd)"></i>input &amp; model</span>
+      <span><i class="sw" style="background:var(--sand-bg);border-color:var(--sand-bd)"></i>terrain &amp; uncertainty</span>
+      <span><i class="sw" style="background:#fff;border-color:var(--ink);border-width:2.5px"></i>gate / decision</span>
+      <span><i class="sw" style="background:var(--green-bg);border-color:var(--green-bd)"></i>output</span>
+      <span><i class="sw" style="background:var(--red-bg);border-color:var(--red-bd)"></i>controlled stop</span>
+      <span><i class="sw" style="background:var(--ink);border-color:var(--ink)"></i>final output</span>
+    </div>
+    <p class="closing">Refine the official forecast, never replace it — and say how far to trust every number.</p>
+  </footer>
+</div>
+
+<script>
+  // Place each side note level with the step it belongs to, and draw its arrow.
+  function place() {
+    const side = document.getElementById('side');
+    const sideTop = side.getBoundingClientRect().top + window.scrollY;
+    document.querySelectorAll('.link').forEach((l) => l.remove());
+    const notes = [...document.querySelectorAll('[data-anchor]')].map((el) => {
+      const a = document.getElementById(el.dataset.anchor).getBoundingClientRect();
+      return { el, aMid: a.top + window.scrollY + a.height / 2 };
+    }).sort((x, y) => x.aMid - y.aMid);
+    let floor = 0;
+    notes.forEach(({ el, aMid }) => {
+      let top = Math.max(aMid - el.offsetHeight / 2 - sideTop, floor);
+      el.style.top = top + 'px';
+      floor = top + el.offsetHeight + 18;
+      if (el.classList.contains('stop')) {
+        const link = document.createElement('div');
+        link.className = 'link';
+        link.style.top = aMid - sideTop + 'px';
+        link.style.left = '-44px';
+        link.style.width = '44px';
+        const label = document.createElement('em');
+        label.textContent = el.dataset.label || '';
+        link.appendChild(label);
+        side.appendChild(link);
+      }
+    });
+    const last = Math.max(...[...side.children].map((c) => c.offsetTop + c.offsetHeight));
+    side.style.minHeight = last + 'px';
+  }
+  document.fonts.ready.then(place);
+  window.addEventListener('resize', place);
+</script>
+</body>
+</html>
