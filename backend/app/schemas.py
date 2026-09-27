@@ -70,6 +70,14 @@ class VariableForecast(BaseModel):
     rain_probability: float | None = Field(
         default=None, ge=0, le=1, description="P(measurable rain) — precipitation only"
     )
+    value_source: str = Field(
+        default="model",
+        description=(
+            "'model': the panchayat-level estimate. 'block': the official block value, "
+            "served because the model did not beat it on validation data (the range and, "
+            "for rain, the rain chance still come from the model)."
+        ),
+    )
 
 
 class PanchayatForecast(BaseModel):

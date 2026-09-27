@@ -403,6 +403,7 @@ class RegionRuntime:
                         nearest_gauge_km=round(gauge, 1) if np.isfinite(gauge) else None,
                     ),
                     rain_probability=round(float(occ[i]), 3) if occ is not None else None,
+                    value_source="block" if self.models[key].point_is_block else "model",
                 )
             panchayats.append(
                 PanchayatForecast(

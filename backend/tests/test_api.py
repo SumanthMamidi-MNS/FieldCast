@@ -393,5 +393,7 @@ def test_runtime_honours_block_value_policy_but_keeps_rain_chance(served, monkey
     rain = [p.variables["precip"] for p in resp.panchayats]
     assert all(v.value == pytest.approx(INPUT["precip"]) for v in rain)
     assert all(v.confidence.lower <= v.value <= v.confidence.upper for v in rain)
+    assert all(v.value_source == "block" for v in rain)
+    assert all(p.variables["tmax"].value_source == "model" for p in resp.panchayats)
     probs = {v.rain_probability for v in rain}
     assert len(probs) > 1, "rain chance must still differ between panchayats"
