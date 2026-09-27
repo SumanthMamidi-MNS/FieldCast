@@ -11,7 +11,7 @@
   "Sangli"
  ],
  "model_version": "0.2.0",
- "generated_at": "2026-09-27T08:00:20",
+ "generated_at": "2026-09-27T09:23:03",
  "quantiles": [
   0.1,
   0.5,
@@ -51,7 +51,7 @@
    ],
    "occurrence": true,
    "calibrated_occurrence": true,
-   "scale_factor": 2.6
+   "scale_factor": 3.85
   },
   "tmax": {
    "label": "Max temperature",
@@ -86,7 +86,7 @@
    ],
    "occurrence": false,
    "calibrated_occurrence": false,
-   "scale_factor": 2.85
+   "scale_factor": 3.45
   },
   "tmin": {
    "label": "Min temperature",
@@ -121,7 +121,7 @@
    ],
    "occurrence": false,
    "calibrated_occurrence": false,
-   "scale_factor": 2.45
+   "scale_factor": 2.85
   },
   "humidity": {
    "label": "Relative humidity",
@@ -400,7 +400,7 @@
   "T3": "Inferred below the validated scale; uncertainty inflated."
  },
  "history_range": [
-  "2022-06-01",
+  "2021-10-01",
   "2023-09-30"
  ],
  "counts": {
