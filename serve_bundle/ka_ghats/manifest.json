@@ -1,0 +1,410 @@
+{
+ "region": "ka_ghats",
+ "state": "Karnataka",
+ "districts": [
+  "Belgaum",
+  "Dharwad",
+  "Uttara Kannada",
+  "Shimoga",
+  "Chikmagalur",
+  "Hassan"
+ ],
+ "model_version": "0.2.0",
+ "generated_at": "2026-09-27T11:13:27",
+ "quantiles": [
+  0.1,
+  0.5,
+  0.9
+ ],
+ "variables": {
+  "precip": {
+   "label": "Rainfall",
+   "unit": "mm",
+   "reconcile": "multiplicative",
+   "feature_columns": [
+    "elevation_m",
+    "slope_deg",
+    "monsoon_exposure",
+    "ruggedness_m",
+    "roughness_m",
+    "local_relief_m",
+    "distance_to_coast_km",
+    "upwind_barrier_m",
+    "downwind_rise_m",
+    "upwind_max_elev_m",
+    "block_value",
+    "elevation_anomaly_m",
+    "block_mean_elevation_m",
+    "block_elevation_spread_m",
+    "exposure_anomaly",
+    "block_mean_exposure",
+    "lapse_prior_c",
+    "doy_sin",
+    "doy_cos",
+    "is_monsoon"
+   ],
+   "quantiles": [
+    0.1,
+    0.5,
+    0.9
+   ],
+   "occurrence": true,
+   "calibrated_occurrence": true,
+   "scale_factor": 3.15,
+   "point_is_block": true
+  },
+  "tmax": {
+   "label": "Max temperature",
+   "unit": "\u00b0C",
+   "reconcile": "additive",
+   "feature_columns": [
+    "elevation_m",
+    "slope_deg",
+    "monsoon_exposure",
+    "ruggedness_m",
+    "roughness_m",
+    "local_relief_m",
+    "distance_to_coast_km",
+    "upwind_barrier_m",
+    "downwind_rise_m",
+    "upwind_max_elev_m",
+    "block_value",
+    "elevation_anomaly_m",
+    "block_mean_elevation_m",
+    "block_elevation_spread_m",
+    "exposure_anomaly",
+    "block_mean_exposure",
+    "lapse_prior_c",
+    "doy_sin",
+    "doy_cos",
+    "is_monsoon"
+   ],
+   "quantiles": [
+    0.1,
+    0.5,
+    0.9
+   ],
+   "occurrence": false,
+   "calibrated_occurrence": false,
+   "scale_factor": 4.3,
+   "point_is_block": false
+  },
+  "tmin": {
+   "label": "Min temperature",
+   "unit": "\u00b0C",
+   "reconcile": "additive",
+   "feature_columns": [
+    "elevation_m",
+    "slope_deg",
+    "monsoon_exposure",
+    "ruggedness_m",
+    "roughness_m",
+    "local_relief_m",
+    "distance_to_coast_km",
+    "upwind_barrier_m",
+    "downwind_rise_m",
+    "upwind_max_elev_m",
+    "block_value",
+    "elevation_anomaly_m",
+    "block_mean_elevation_m",
+    "block_elevation_spread_m",
+    "exposure_anomaly",
+    "block_mean_exposure",
+    "lapse_prior_c",
+    "doy_sin",
+    "doy_cos",
+    "is_monsoon"
+   ],
+   "quantiles": [
+    0.1,
+    0.5,
+    0.9
+   ],
+   "occurrence": false,
+   "calibrated_occurrence": false,
+   "scale_factor": 2.9,
+   "point_is_block": false
+  },
+  "humidity": {
+   "label": "Relative humidity",
+   "unit": "%",
+   "reconcile": "additive",
+   "feature_columns": [
+    "elevation_m",
+    "slope_deg",
+    "monsoon_exposure",
+    "ruggedness_m",
+    "roughness_m",
+    "local_relief_m",
+    "distance_to_coast_km",
+    "upwind_barrier_m",
+    "downwind_rise_m",
+    "upwind_max_elev_m",
+    "block_value",
+    "elevation_anomaly_m",
+    "block_mean_elevation_m",
+    "block_elevation_spread_m",
+    "exposure_anomaly",
+    "block_mean_exposure",
+    "lapse_prior_c",
+    "doy_sin",
+    "doy_cos",
+    "is_monsoon"
+   ],
+   "quantiles": [
+    0.1,
+    0.5,
+    0.9
+   ],
+   "occurrence": false,
+   "calibrated_occurrence": false,
+   "scale_factor": null,
+   "point_is_block": false
+  },
+  "wind": {
+   "label": "Wind speed",
+   "unit": "km/h",
+   "reconcile": "multiplicative",
+   "feature_columns": [
+    "elevation_m",
+    "slope_deg",
+    "monsoon_exposure",
+    "ruggedness_m",
+    "roughness_m",
+    "local_relief_m",
+    "distance_to_coast_km",
+    "upwind_barrier_m",
+    "downwind_rise_m",
+    "upwind_max_elev_m",
+    "block_value",
+    "elevation_anomaly_m",
+    "block_mean_elevation_m",
+    "block_elevation_spread_m",
+    "exposure_anomaly",
+    "block_mean_exposure",
+    "lapse_prior_c",
+    "doy_sin",
+    "doy_cos",
+    "is_monsoon"
+   ],
+   "quantiles": [
+    0.1,
+    0.5,
+    0.9
+   ],
+   "occurrence": false,
+   "calibrated_occurrence": false,
+   "scale_factor": null,
+   "point_is_block": false
+  }
+ },
+ "support": {
+  "mean": [
+   654.3588740319802,
+   1.5840817510656326,
+   0.002746283460087732,
+   35.760967807912905,
+   28.72389769221592,
+   82.83206101782866,
+   91.0845652898895,
+   135.66518077505134,
+   85.22676741869768,
+   780.5206521872997
+  ],
+  "inv_cov": [
+   [
+    0.000737894497045109,
+    0.0017237206061951247,
+    -0.0007037247475268355,
+    -0.0012078350873695486,
+    0.00038237789370539364,
+    0.0001579000295638023,
+    -2.4721416972333725e-05,
+    0.0008079179377312477,
+    1.934332863279228e-05,
+    -0.0007572043811868798
+   ],
+   [
+    0.0017237206061895328,
+    0.9923559437758502,
+    -0.026833371733476795,
+    0.024024039939151625,
+    -0.0058512261907032416,
+    -0.029689938842576816,
+    -0.001740626054003801,
+    0.0019947697548963173,
+    0.00027283183934038833,
+    -0.001188300393979168
+   ],
+   [
+    -0.000703724747525068,
+    -0.026833371732425712,
+    5.334960905908939,
+    0.0023765237037424937,
+    0.00029728574897212835,
+    -0.0014341402570377242,
+    -0.000905591450320404,
+    -0.0005729673509247723,
+    -0.00023752308211459115,
+    0.0007488417054834469
+   ],
+   [
+    -0.0012078350873696959,
+    0.02402403993914403,
+    0.0023765237037514696,
+    0.021858489070749977,
+    -0.011590541215196227,
+    -0.006124771963437251,
+    -0.0006473129480125068,
+    -0.0013468812156636019,
+    3.2919621234119934e-05,
+    0.0013079038997919977
+   ],
+   [
+    0.00038237789370543327,
+    -0.0058512261907011824,
+    0.00029728574896063456,
+    -0.011590541215196265,
+    0.008730988047663436,
+    0.002279526052099653,
+    0.0005765760736631941,
+    0.000384033429323873,
+    9.113518226623371e-05,
+    -0.000397260030975135
+   ],
+   [
+    0.0001579000295639684,
+    -0.029689938842576286,
+    -0.001434140257017281,
+    -0.006124771963437443,
+    0.002279526052099689,
+    0.002743303353514688,
+    0.0002731642683349207,
+    0.00020541278516555587,
+    -9.487702462866626e-05,
+    -0.00021705642576169627
+   ],
+   [
+    -2.472141697232485e-05,
+    -0.0017406260540042248,
+    -0.0009055914503207797,
+    -0.0006473129480125202,
+    0.0005765760736631933,
+    0.000273164268334933,
+    0.0008883636597559412,
+    3.777492189882324e-05,
+    3.8196888821211006e-05,
+    -4.293007722104752e-05
+   ],
+   [
+    0.000807917937731249,
+    0.001994769754903038,
+    -0.0005729673509310483,
+    -0.001346881215663428,
+    0.00038403342932382523,
+    0.00020541278516535795,
+    3.77749218988129e-05,
+    0.0009777153165481177,
+    -1.730092737341749e-05,
+    -0.000871407886445736
+   ],
+   [
+    1.934332863279196e-05,
+    0.00027283183934069896,
+    -0.00023752308211441285,
+    3.2919621234126507e-05,
+    9.11351822662334e-05,
+    -9.48770246286752e-05,
+    3.819688882121119e-05,
+    -1.7300927373418083e-05,
+    9.563526600219815e-05,
+    6.6461145173132334e-06
+   ],
+   [
+    -0.0007572043811868841,
+    -0.0011883003939855308,
+    0.000748841705485709,
+    0.001307903899791835,
+    -0.00039726003097509025,
+    -0.00021705642576150776,
+    -4.2930077221036976e-05,
+    -0.0008714078864457396,
+    6.646114517312589e-06,
+    0.000813328494638638
+   ]
+  ],
+  "columns": [
+   "elevation_m",
+   "slope_deg",
+   "monsoon_exposure",
+   "ruggedness_m",
+   "roughness_m",
+   "local_relief_m",
+   "distance_to_coast_km",
+   "upwind_barrier_m",
+   "downwind_rise_m",
+   "upwind_max_elev_m"
+  ],
+  "gauges": [
+   [
+    15.85,
+    74.617
+   ],
+   [
+    14.233,
+    76.433
+   ],
+   [
+    15.417,
+    75.633
+   ],
+   [
+    14.783,
+    74.133
+   ],
+   [
+    14.283,
+    74.45
+   ],
+   [
+    12.917,
+    74.883
+   ],
+   [
+    16.7,
+    74.233
+   ],
+   [
+    16.85,
+    74.6
+   ]
+  ]
+ },
+ "trained_months": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12
+ ],
+ "tiers": {
+  "T1": "Validated against dense reanalysis truth at ~9km.",
+  "T2": "Validated against real rain-gauge observations.",
+  "T3": "Inferred below the validated scale; uncertainty inflated."
+ },
+ "history_range": [
+  "2021-10-01",
+  "2023-09-30"
+ ],
+ "counts": {
+  "blocks": 48,
+  "panchayats": 1793
+ }
+}

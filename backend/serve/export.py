@@ -77,6 +77,7 @@ def write_models(
     support: SupportModel | None,
     scale_calibration: dict,
     region_key: str,
+    policy: dict | None = None,
 ) -> dict:
     """models.npz plus the model half of manifest.json; returns the manifest dict."""
     arrays: dict[str, np.ndarray] = {}
@@ -102,6 +103,7 @@ def write_models(
             "occurrence": has_occ,
             "calibrated_occurrence": cal is not None,
             "scale_factor": float(calib["factor"]) if calib else None,
+            "point_is_block": bool((policy or {}).get(key, {}).get("point_is_block", False)),
         }
     out_dir.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out_dir / "models.npz", **arrays)
@@ -271,7 +273,12 @@ def export_region(region_key: str) -> dict:
         shutil.rmtree(out_dir)
 
     manifest = write_models(
-        out_dir, predictor.models, predictor.support, predictor.scale_calibration, region_key
+        out_dir,
+        predictor.models,
+        predictor.support,
+        predictor.scale_calibration,
+        region_key,
+        predictor.policy,
     )
 
     blocks = gpd.read_parquet(PROCESSED_DIR / f"blocks_{region_key}.parquet").to_crs(GEOGRAPHIC_CRS)

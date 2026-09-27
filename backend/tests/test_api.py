@@ -385,3 +385,13 @@ def test_large_responses_are_gzip_compressed(served):
     )
     assert r.status_code == 200
     assert r.headers.get("content-encoding") == "gzip"
+
+
+def test_runtime_honours_block_value_policy_but_keeps_rain_chance(served, monkeypatch):
+    monkeypatch.setattr(served.models["precip"], "point_is_block", True)
+    resp = served.forecast(BLOCK, date(2023, 7, 15), INPUT)
+    rain = [p.variables["precip"] for p in resp.panchayats]
+    assert all(v.value == pytest.approx(INPUT["precip"]) for v in rain)
+    assert all(v.confidence.lower <= v.value <= v.confidence.upper for v in rain)
+    probs = {v.rain_probability for v in rain}
+    assert len(probs) > 1, "rain chance must still differ between panchayats"

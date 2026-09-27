@@ -94,8 +94,11 @@ class Predictor:
         support: SupportModel | None,
         grid: pd.DataFrame,
         scale_calibration: dict | None = None,
+        policy: dict | None = None,
     ):
         self.region_key = region_key
+        # Per-variable serving policy decided on validation data (models/policy.py).
+        self.policy = policy or {}
         # Per-variable interval factor fitted at gauges (see
         # evaluate.run.calibrate_point_scale). Applied below the grid scale only.
         self.scale_calibration = scale_calibration or {}
@@ -140,7 +143,9 @@ class Predictor:
             )
         calib_path = root / "scale_calibration.json"
         calib = json.loads(calib_path.read_text(encoding="utf-8")) if calib_path.exists() else None
-        return cls(region_key, models, support, grid, calib)
+        policy_path = root / "serving_policy.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8")) if policy_path.exists() else None
+        return cls(region_key, models, support, grid, calib, policy)
 
     def predict_variable(
         self,
@@ -179,4 +184,6 @@ class Predictor:
             weights=weights,
             reconcile_to=reconcile_to,
             scale_factor=float(calib["factor"]) if calib is not None else None,
+            point_is_block=bool(self.policy.get(key, {}).get("point_is_block", False)),
+            block_value=block_value,
         )

@@ -114,6 +114,20 @@ def reconcile_by_group(
 _MIN_CLUSTERS_FOR_SIGNIFICANCE = 8
 
 
+def _add_policy(report: dict, predictor: Predictor, key: str, y: np.ndarray, pred: dict) -> None:
+    """Record the serving policy and the model's own (pre-policy) skill.
+
+    When the policy serves the block value, the headline skill is exactly 0 by
+    construction; the raw model skill shows what the model alone would have done.
+    """
+    policy = predictor.policy.get(key, {})
+    report["point_is_block"] = bool(policy.get("point_is_block", False))
+    report["validation_served_skill"] = policy.get("validation_served_skill")
+    raw = pred.get("raw_quantiles", {}).get(0.5)
+    if raw is not None:
+        report["raw_model_skill_vs_naive"] = skill_score(point_metrics(y, raw).mae, report["naive_mae"])
+
+
 def reconcile_two_stage_by_group(
     conditional: dict[float, np.ndarray],
     occurrence: np.ndarray,
@@ -254,7 +268,9 @@ def evaluate_t1(region_key: str, predictor: Predictor, transfer: bool) -> dict:
             extra["B2_lapse_rate"] = lapse_rate_correction(bv, test["elevation_anomaly_m"])
 
         groups = test["block_id"].astype(str) + "|" + test["date"].astype(str)
-        if pred.get("conditional") is not None:
+        if predictor.policy.get(key, {}).get("point_is_block"):
+            reconciled = bv.copy()
+        elif pred.get("conditional") is not None:
             reconciled = reconcile_two_stage_by_group(
                 pred["conditional"], pred["occurrence"], bv, groups
             )
@@ -264,6 +280,7 @@ def evaluate_t1(region_key: str, predictor: Predictor, transfer: bool) -> dict:
         results[key] = _variable_report(
             key, y, pred, bv, test["block_id"].to_numpy(), extra, reconciled
         )
+        _add_policy(results[key], predictor, key, y, pred)
         console.print(
             f"  T1 {key}: skill vs naive {results[key]['skill_vs_naive']:+.3f} "
             f"(n={results[key]['n']:,}, {results[key]['verdict']})"
@@ -416,6 +433,7 @@ def evaluate_t2(
         if key in _TEMPERATURE_VARS:
             extra["B2_lapse_rate"] = lapse_rate_correction(bv, feats["elevation_anomaly_m"])
         results[key] = _variable_report(key, y, pred, bv, rows["station_id"].to_numpy(), extra)
+        _add_policy(results[key], predictor, key, y, pred)
         console.print(
             f"  T2 {key}: skill vs naive {results[key]['skill_vs_naive']:+.3f} "
             f"(n={results[key]['n']:,} gauge-days at {results[key]['n_clusters']} gauges, "
@@ -471,6 +489,16 @@ def write_markdown(report: dict, path) -> None:
             "*Served skill: after block-mean reconciliation, i.e. the value the API "
             "actually returns (T1 only; gauges are not a block).",
         ]
+        for r in res.values():
+            if r.get("point_is_block"):
+                lines.append(
+                    f"- **{r['label']}: block value served.** On validation data the served "
+                    f"estimate did not beat the block value (skill "
+                    f"{_fmt(r.get('validation_served_skill'))}), so FieldCast serves the official "
+                    f"block value as the point estimate and uses the model for the range"
+                    + (" and the rain chance." if r.get("occurrence") else ".")
+                    + f" The model alone would have scored {_fmt(r.get('raw_model_skill_vs_naive'))} here."
+                )
         lines.append("")
         other = [(r["label"], n, b) for r in res.values() for n, b in r["baselines"].items()]
         if other:

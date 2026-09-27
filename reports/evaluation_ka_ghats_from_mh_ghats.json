@@ -1,0 +1,471 @@
+{
+  "region": "ka_ghats",
+  "model_region": "mh_ghats",
+  "transfer": true,
+  "generated_at": "2026-09-27T11:13:03",
+  "scale_calibration": {
+    "precip": {
+      "factor": 5.8,
+      "n": 869,
+      "n_gauges": 4,
+      "periods": [
+        [
+          "2019-06-01",
+          "2019-09-30"
+        ],
+        [
+          "2020-06-01",
+          "2020-09-30"
+        ],
+        [
+          "2021-06-01",
+          "2021-09-30"
+        ],
+        [
+          "2021-10-01",
+          "2022-05-31"
+        ],
+        [
+          "2022-06-01",
+          "2022-09-30"
+        ]
+      ]
+    },
+    "tmax": {
+      "factor": 3.25,
+      "n": 691,
+      "n_gauges": 4,
+      "periods": [
+        [
+          "2019-06-01",
+          "2019-09-30"
+        ],
+        [
+          "2020-06-01",
+          "2020-09-30"
+        ],
+        [
+          "2021-06-01",
+          "2021-09-30"
+        ],
+        [
+          "2021-10-01",
+          "2022-05-31"
+        ],
+        [
+          "2022-06-01",
+          "2022-09-30"
+        ]
+      ]
+    },
+    "tmin": {
+      "factor": 2.6,
+      "n": 1656,
+      "n_gauges": 4,
+      "periods": [
+        [
+          "2019-06-01",
+          "2019-09-30"
+        ],
+        [
+          "2020-06-01",
+          "2020-09-30"
+        ],
+        [
+          "2021-06-01",
+          "2021-09-30"
+        ],
+        [
+          "2021-10-01",
+          "2022-05-31"
+        ],
+        [
+          "2022-06-01",
+          "2022-09-30"
+        ]
+      ]
+    }
+  },
+  "T1": {
+    "precip": {
+      "variable": "precip",
+      "label": "Rainfall",
+      "unit": "mm",
+      "n": 64980,
+      "n_clusters": 48,
+      "model_mae": 0.903394099283296,
+      "model_rmse": 2.410520220021684,
+      "model_bias": -8.747833004125579e-18,
+      "naive_mae": 0.903394099283296,
+      "naive_rmse": 2.410520220021684,
+      "skill_vs_naive": 0.0,
+      "skill_ci90": [
+        0.0,
+        0.0
+      ],
+      "verdict": "does NOT beat naive",
+      "interval_coverage_80": 0.8777316097260696,
+      "interval_width": 3.9724609886856017,
+      "pit_ks": 0.42883964296706684,
+      "mean_support": 0.5448800778612296,
+      "baselines": {
+        "B1_idw": {
+          "mae": 0.8837797829691324,
+          "model_skill_vs_this": -0.022193669387036152
+        }
+      },
+      "reconciled_mae": 0.903394099283296,
+      "reconciled_skill_vs_naive": 0.0,
+      "occurrence": {
+        "brier": 0.040418740529683486,
+        "brier_skill_vs_climatology": 0.7957034764886506,
+        "brier_naive_block": 0.05620190827947061,
+        "base_rate": 0.2716220375500154,
+        "reliability": [
+          [
+            0.004733049054059273,
+            0.003639804906457014,
+            41211
+          ],
+          [
+            0.14257449919475523,
+            0.11863391252246855,
+            1669
+          ],
+          [
+            0.2468547370531371,
+            0.23234200743494424,
+            1614
+          ],
+          [
+            0.34586341578635726,
+            0.30277986476333585,
+            1331
+          ],
+          [
+            0.47261449631811764,
+            0.3684210526315789,
+            570
+          ],
+          [
+            0.5488448063456384,
+            0.5595938001068947,
+            1871
+          ],
+          [
+            0.6333401394172274,
+            0.6441947565543071,
+            801
+          ],
+          [
+            0.7740813167787564,
+            0.7419497132774592,
+            2267
+          ],
+          [
+            0.8406111078059543,
+            0.8492352512745812,
+            1373
+          ],
+          [
+            0.9775848651622288,
+            0.9698525217958119,
+            12273
+          ]
+        ]
+      },
+      "point_is_block": true,
+      "validation_served_skill": -0.0745,
+      "raw_model_skill_vs_naive": -0.20279876013852327
+    },
+    "tmax": {
+      "variable": "tmax",
+      "label": "Max temperature",
+      "unit": "\u00b0C",
+      "n": 64980,
+      "n_clusters": 48,
+      "model_mae": 0.47554002648827565,
+      "model_rmse": 0.6544683214527504,
+      "model_bias": 0.01990574820663259,
+      "naive_mae": 0.5952584311656334,
+      "naive_rmse": 0.8553844345606396,
+      "skill_vs_naive": 0.20112004872056244,
+      "skill_ci90": [
+        0.11788324476739777,
+        0.27468933561897474
+      ],
+      "verdict": "beats naive (significant)",
+      "interval_coverage_80": 0.8602646968297938,
+      "interval_width": 1.8501500404844342,
+      "pit_ks": 0.11030274817603625,
+      "mean_support": 0.5448800778612296,
+      "baselines": {
+        "B1_idw": {
+          "mae": 0.5697867719037436,
+          "model_skill_vs_this": 0.1654070435868059
+        },
+        "B2_lapse_rate": {
+          "mae": 0.44031319674715486,
+          "model_skill_vs_this": -0.08000402895339387
+        }
+      },
+      "reconciled_mae": 0.46961052284022176,
+      "reconciled_skill_vs_naive": 0.2110812745304056,
+      "point_is_block": false,
+      "validation_served_skill": 0.3098,
+      "raw_model_skill_vs_naive": 0.20112004872056244
+    },
+    "tmin": {
+      "variable": "tmin",
+      "label": "Min temperature",
+      "unit": "\u00b0C",
+      "n": 64980,
+      "n_clusters": 48,
+      "model_mae": 0.4106171139866115,
+      "model_rmse": 0.5869140091076307,
+      "model_bias": 0.016714934640398155,
+      "naive_mae": 0.5006157425728063,
+      "naive_rmse": 0.7366187119093338,
+      "skill_vs_naive": 0.17977586586403838,
+      "skill_ci90": [
+        0.11211986785442578,
+        0.24573907695826475
+      ],
+      "verdict": "beats naive (significant)",
+      "interval_coverage_80": 0.8744844567559249,
+      "interval_width": 1.7493367050695823,
+      "pit_ks": 0.11451357952348074,
+      "mean_support": 0.5448800778612296,
+      "baselines": {
+        "B1_idw": {
+          "mae": 0.49869649188730236,
+          "model_skill_vs_this": 0.176619204934362
+        },
+        "B2_lapse_rate": {
+          "mae": 0.42010476723769286,
+          "model_skill_vs_this": 0.022584017109506638
+        }
+      },
+      "reconciled_mae": 0.408494116557902,
+      "reconciled_skill_vs_naive": 0.18401663827322945,
+      "point_is_block": false,
+      "validation_served_skill": 0.2183,
+      "raw_model_skill_vs_naive": 0.17977586586403838
+    },
+    "humidity": {
+      "variable": "humidity",
+      "label": "Relative humidity",
+      "unit": "%",
+      "n": 64980,
+      "n_clusters": 48,
+      "model_mae": 1.73645967733476,
+      "model_rmse": 2.387584464371914,
+      "model_bias": 0.029512220538990608,
+      "naive_mae": 1.722795622096176,
+      "naive_rmse": 2.3916672316066716,
+      "skill_vs_naive": -0.007931326887143264,
+      "skill_ci90": [
+        -0.03490291381589913,
+        0.014642424483175244
+      ],
+      "verdict": "does NOT beat naive",
+      "interval_coverage_80": 0.8613265620190828,
+      "interval_width": 7.306502431317441,
+      "pit_ks": 0.11289741559011121,
+      "mean_support": 0.5448800778612296,
+      "baselines": {
+        "B1_idw": {
+          "mae": 1.559324088763901,
+          "model_skill_vs_this": -0.11359767340686489
+        }
+      },
+      "reconciled_mae": 1.7052230940526723,
+      "reconciled_skill_vs_naive": 0.010200007370649522,
+      "point_is_block": false,
+      "validation_served_skill": 0.0512,
+      "raw_model_skill_vs_naive": -0.007931326887143264
+    },
+    "wind": {
+      "variable": "wind",
+      "label": "Wind speed",
+      "unit": "km/h",
+      "n": 64980,
+      "n_clusters": 48,
+      "model_mae": 1.2687896111594552,
+      "model_rmse": 1.7393788878984175,
+      "model_bias": 0.01036171832800774,
+      "naive_mae": 1.2749488304093568,
+      "naive_rmse": 1.7476660125048813,
+      "skill_vs_naive": 0.004830954076740501,
+      "skill_ci90": [
+        -0.0012063110434706635,
+        0.011198008945000552
+      ],
+      "verdict": "beats naive (not significant)",
+      "interval_coverage_80": 0.9046783625730994,
+      "interval_width": 5.531718987457189,
+      "pit_ks": 0.12871896220158097,
+      "mean_support": 0.5448800778612296,
+      "baselines": {
+        "B1_idw": {
+          "mae": 1.2219352014800586,
+          "model_skill_vs_this": -0.03834443072156746
+        }
+      },
+      "reconciled_mae": 1.2660764135971343,
+      "reconciled_skill_vs_naive": 0.006959037571236282,
+      "point_is_block": false,
+      "validation_served_skill": 0.0087,
+      "raw_model_skill_vs_naive": 0.004830954076740501
+    }
+  },
+  "T2": {
+    "precip": {
+      "variable": "precip",
+      "label": "Rainfall",
+      "unit": "mm",
+      "n": 316,
+      "n_clusters": 3,
+      "model_mae": 12.135200421940928,
+      "model_rmse": 21.47823439291812,
+      "model_bias": -3.086445147679326,
+      "naive_mae": 12.135200421940928,
+      "naive_rmse": 21.47823439291812,
+      "skill_vs_naive": 0.0,
+      "skill_ci90": [
+        0.0,
+        0.0
+      ],
+      "verdict": "does NOT beat naive (only 3 gauges: significance not testable)",
+      "interval_coverage_80": 0.8924050632911392,
+      "interval_width": 73.19465431177659,
+      "pit_ks": 0.17169763172753116,
+      "mean_support": 0.611177284973602,
+      "baselines": {},
+      "occurrence": {
+        "brier": 0.2571046738759967,
+        "brier_skill_vs_climatology": -0.03542828451548807,
+        "brier_naive_block": 0.31329113924050633,
+        "base_rate": 0.5411392405063291,
+        "reliability": [
+          [
+            0.02774282810202378,
+            0.18518518518518517,
+            54
+          ],
+          [
+            0.1401065496504974,
+            0.3333333333333333,
+            9
+          ],
+          [
+            0.25603681188787575,
+            0.25,
+            8
+          ],
+          [
+            0.34254029480644727,
+            0.16666666666666666,
+            12
+          ],
+          [
+            0.46956521739130436,
+            0.0,
+            2
+          ],
+          [
+            0.5534280804575755,
+            0.45454545454545453,
+            11
+          ],
+          [
+            0.627218654211064,
+            0.6,
+            5
+          ],
+          [
+            0.7726303546204133,
+            0.375,
+            16
+          ],
+          [
+            0.8487755238200247,
+            0.45454545454545453,
+            11
+          ],
+          [
+            0.986556767896543,
+            0.7180851063829787,
+            188
+          ]
+        ]
+      },
+      "point_is_block": true,
+      "validation_served_skill": -0.0745,
+      "raw_model_skill_vs_naive": 0.026264103552392726
+    },
+    "tmax": {
+      "variable": "tmax",
+      "label": "Max temperature",
+      "unit": "\u00b0C",
+      "n": 765,
+      "n_clusters": 3,
+      "model_mae": 1.6874390163868613,
+      "model_rmse": 2.0985041952565813,
+      "model_bias": -1.2541547318405606,
+      "naive_mae": 1.877050108932463,
+      "naive_rmse": 2.255622256652449,
+      "skill_vs_naive": 0.10101546657880078,
+      "skill_ci90": [
+        0.007871550698972954,
+        0.2101799330140336
+      ],
+      "verdict": "beats naive (only 3 gauges: significance not testable)",
+      "interval_coverage_80": 0.8405228758169935,
+      "interval_width": 6.865412546130493,
+      "pit_ks": 0.33658207515037203,
+      "mean_support": 0.5963227520138183,
+      "baselines": {
+        "B2_lapse_rate": {
+          "mae": 1.6622936164022404,
+          "model_skill_vs_this": -0.015126930487192825
+        }
+      },
+      "point_is_block": false,
+      "validation_served_skill": 0.3098,
+      "raw_model_skill_vs_naive": 0.10101546657880078
+    },
+    "tmin": {
+      "variable": "tmin",
+      "label": "Min temperature",
+      "unit": "\u00b0C",
+      "n": 836,
+      "n_clusters": 3,
+      "model_mae": 1.1106367473085184,
+      "model_rmse": 1.4498471159744526,
+      "model_bias": 0.13540153825847173,
+      "naive_mae": 1.254984051036683,
+      "naive_rmse": 1.570825328160194,
+      "skill_vs_naive": 0.1150192335981689,
+      "skill_ci90": [
+        0.03930661832839655,
+        0.1995981745008648
+      ],
+      "verdict": "beats naive (only 3 gauges: significance not testable)",
+      "interval_coverage_80": 0.8133971291866029,
+      "interval_width": 4.804742345457085,
+      "pit_ks": 0.09928229665071775,
+      "mean_support": 0.6178002423351896,
+      "baselines": {
+        "B2_lapse_rate": {
+          "mae": 1.169345841547554,
+          "model_skill_vs_this": 0.05020678412926827
+        }
+      },
+      "point_is_block": false,
+      "validation_served_skill": 0.2183,
+      "raw_model_skill_vs_naive": 0.1150192335981689
+    }
+  },
+  "T2_hist": {}
+}

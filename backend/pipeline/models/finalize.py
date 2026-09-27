@@ -35,6 +35,8 @@ def finalize_variable(
     weights: np.ndarray | None = None,
     reconcile_to: float | None = None,
     scale_factor: float | None = None,
+    point_is_block: bool = False,
+    block_value: np.ndarray | None = None,
 ) -> dict:
     """Served median, interval, occurrence and support for one variable.
 
@@ -73,6 +75,13 @@ def finalize_variable(
         lower, upper = median - k * (median - lower), median + k * (upper - median)
     else:
         lower, upper = inflate_interval(quantiles[lo_q], median, quantiles[hi_q], score, tier)
+    if point_is_block and block_value is not None:
+        # Serving policy (see models/policy.py): the model did not beat the block
+        # value on validation data, so the point value served is the block value.
+        # The range still comes from the model, widened to contain it.
+        median = np.asarray(block_value, dtype=float).copy()
+        lower = np.minimum(lower, median)
+        upper = np.maximum(upper, median)
     if reconcile_mode == "multiplicative":
         lower, median, upper = clamp_non_negative(lower, median, upper)
 

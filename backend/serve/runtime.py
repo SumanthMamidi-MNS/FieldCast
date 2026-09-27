@@ -82,6 +82,7 @@ class _VariableModel:
     cal_x: np.ndarray | None
     cal_y: np.ndarray | None
     scale_factor: float | None
+    point_is_block: bool = False
 
     def predict(self, x: np.ndarray, block_value: np.ndarray) -> tuple[dict, np.ndarray | None]:
         q = {
@@ -131,6 +132,7 @@ class RegionRuntime:
                 cal_x=np.asarray(arrays[f"{key}/cal_x"]) if meta["calibrated_occurrence"] else None,
                 cal_y=np.asarray(arrays[f"{key}/cal_y"]) if meta["calibrated_occurrence"] else None,
                 scale_factor=meta["scale_factor"],
+                point_is_block=bool(meta.get("point_is_block", False)),
             )
         return out
 
@@ -334,6 +336,8 @@ class RegionRuntime:
             weights=weights,
             reconcile_to=reconcile_to,
             scale_factor=model.scale_factor,
+            point_is_block=model.point_is_block,
+            block_value=np.full(n, block_value),
         )
 
     def forecast(

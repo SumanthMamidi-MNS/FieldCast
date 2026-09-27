@@ -11,7 +11,7 @@
   "Sangli"
  ],
  "model_version": "0.2.0",
- "generated_at": "2026-09-27T09:23:03",
+ "generated_at": "2026-09-27T11:13:20",
  "quantiles": [
   0.1,
   0.5,
@@ -51,7 +51,8 @@
    ],
    "occurrence": true,
    "calibrated_occurrence": true,
-   "scale_factor": 3.85
+   "scale_factor": 5.8,
+   "point_is_block": true
   },
   "tmax": {
    "label": "Max temperature",
@@ -86,7 +87,8 @@
    ],
    "occurrence": false,
    "calibrated_occurrence": false,
-   "scale_factor": 3.45
+   "scale_factor": 3.25,
+   "point_is_block": false
   },
   "tmin": {
    "label": "Min temperature",
@@ -121,7 +123,8 @@
    ],
    "occurrence": false,
    "calibrated_occurrence": false,
-   "scale_factor": 2.85
+   "scale_factor": 2.6,
+   "point_is_block": false
   },
   "humidity": {
    "label": "Relative humidity",
@@ -156,7 +159,8 @@
    ],
    "occurrence": false,
    "calibrated_occurrence": false,
-   "scale_factor": null
+   "scale_factor": null,
+   "point_is_block": false
   },
   "wind": {
    "label": "Wind speed",
@@ -191,7 +195,8 @@
    ],
    "occurrence": false,
    "calibrated_occurrence": false,
-   "scale_factor": null
+   "scale_factor": null,
+   "point_is_block": false
   }
  },
  "support": {
@@ -400,7 +405,7 @@
   "T3": "Inferred below the validated scale; uncertainty inflated."
  },
  "history_range": [
-  "2021-10-01",
+  "2021-06-01",
   "2023-09-30"
  ],
  "counts": {

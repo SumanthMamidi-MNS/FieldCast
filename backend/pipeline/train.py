@@ -42,6 +42,7 @@ from backend.pipeline.features.build import (
 )
 from backend.pipeline.geo.terrain import terrain_features
 from backend.pipeline.models.downscaler import MODEL_VERSION, VariableDownscaler
+from backend.pipeline.models.policy import decide_policy
 from backend.pipeline.models.uncertainty import SupportModel
 from backend.pipeline.sources.cache import OfflineCacheMiss, is_offline
 from backend.pipeline.sources.open_meteo import fetch_daily_weather
@@ -185,6 +186,7 @@ def train_region(
         "variables": {},
     }
 
+    policies: dict[str, dict] = {}
     for key in VARIABLES:
         console.print(f"\n[cyan]Training {key}[/cyan]")
         try:
@@ -219,6 +221,13 @@ def train_region(
         model = VariableDownscaler(VARIABLES[key])
         result = model.fit(train, valid, FEATURE_COLUMNS)
         model.save(artifact_root / key)
+        policies[key] = decide_policy(model, valid, VARIABLES[key])
+        if policies[key]["point_is_block"]:
+            console.print(
+                f"  [yellow]policy: served {key} does not beat the block value on validation "
+                f"(skill {policies[key]['validation_served_skill']:+.3f}); "
+                f"the block value will be served as the point estimate[/yellow]"
+            )
 
         console.print(
             f"  train={len(train):,} valid={len(valid):,} test={len(test):,}"
@@ -246,6 +255,8 @@ def train_region(
     points.to_parquet(PROCESSED_DIR / f"grid_{region.key}.parquet", index=False)
 
     summary["skipped_seasons"] = [list(s) for s in SKIPPED_SEASONS]
+    summary["serving_policy"] = policies
+    (artifact_root / "serving_policy.json").write_text(json.dumps(policies, indent=2), encoding="utf-8")
     (artifact_root / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
 
