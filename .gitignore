@@ -56,8 +56,3 @@ reports/*.log
 Thumbs.db
 desktop.ini
 
-# ---------------------------------------------------------------
-# Local AI-assistant setup (kept locally, not published)
-# ---------------------------------------------------------------
-CLAUDE.md
-.claude/
