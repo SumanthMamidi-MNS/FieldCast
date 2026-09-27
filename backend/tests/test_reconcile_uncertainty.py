@@ -380,3 +380,17 @@ def test_numpy_chi2_survival_matches_scipy():
     xs = np.array([0.0, 0.3, 2.0, 7.5, 10.0, 18.3, 40.0, 120.0])
     for df in (1, 3, 7, 10, 13):
         assert np.allclose(chi2_sf(xs, df), chi2.sf(xs, df), rtol=1e-9, atol=1e-14)
+
+
+def test_multiplicative_widening_never_goes_negative():
+    from backend.pipeline.models.uncertainty import apply_scale_factor
+
+    lo, hi = apply_scale_factor(np.array([2.0]), np.array([0.5]), np.array([9.0]), 4.0, "multiplicative")
+    assert lo[0] == 0.0 and hi[0] == pytest.approx(30.0)
+
+
+def test_additive_widening_is_linear():
+    from backend.pipeline.models.uncertainty import apply_scale_factor
+
+    lo, hi = apply_scale_factor(np.array([30.0]), np.array([28.0]), np.array([33.0]), 2.0, "additive")
+    assert lo[0] == pytest.approx(26.0) and hi[0] == pytest.approx(36.0)

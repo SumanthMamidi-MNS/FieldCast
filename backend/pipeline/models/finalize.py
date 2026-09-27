@@ -10,11 +10,12 @@ from __future__ import annotations
 import numpy as np
 
 from backend.app.schemas import Tier
-from backend.config import QUANTILES
+from backend.config import QUANTILES, WET_DAY_THRESHOLD_MM
 from backend.pipeline.models.numerics import mixture_quantiles
 from backend.pipeline.models.reconcile import reconcile_quantiles, reconcile_two_stage
 from backend.pipeline.models.uncertainty import (
     SupportModel,
+    apply_scale_factor,
     clamp_non_negative,
     inflate_interval,
     nearest_gauge_km,
@@ -69,23 +70,44 @@ def finalize_variable(
 
     lo_q, hi_q = min(QUANTILES), max(QUANTILES)
     median = quantiles[0.5]
+    # Panchayat-scale upper estimate, before point-scale widening. Area advisories
+    # (heavy-rain preparedness) use this: the widened range describes an extreme
+    # at a single gauge somewhere in the panchayat, not the panchayat as a whole.
+    area_upper = np.asarray(quantiles[hi_q], dtype=float).copy()
+
+    # The range. For a two-stage variable (rain) it is an *if-it-rains* range
+    # from the wet-day amount distribution: rain is published as two statements,
+    # a chance and an amount if it rains. One combined range had to stretch to
+    # cover gauges that got rain on days the model called likely dry, which made
+    # a 1.9 mm day read "0-88 mm".
+    range_basis = "if_rain" if conditional is not None else "all_days"
+    src = conditional if conditional is not None else quantiles
+    centre = src[0.5]
     if scale_factor is not None and tier is not Tier.T1:
-        lower, upper = inflate_interval(quantiles[lo_q], median, quantiles[hi_q], score, Tier.T2)
-        k = float(scale_factor)
-        lower, upper = median - k * (median - lower), median + k * (upper - median)
+        lower, upper = inflate_interval(src[lo_q], centre, src[hi_q], score, Tier.T2)
+        lower, upper = apply_scale_factor(centre, lower, upper, float(scale_factor), reconcile_mode)
     else:
-        lower, upper = inflate_interval(quantiles[lo_q], median, quantiles[hi_q], score, tier)
+        lower, upper = inflate_interval(src[lo_q], centre, src[hi_q], score, tier)
+
     if point_is_block and block_value is not None:
         # Serving policy (see models/policy.py): the model did not beat the block
         # value on validation data, so the point value served is the block value.
-        # The range still comes from the model, widened to contain it.
         median = np.asarray(block_value, dtype=float).copy()
+    if range_basis == "all_days":
+        # An all-days range must contain the served value; an if-it-rains range
+        # need not (the expected amount on a 30%-chance day sits below it).
         lower = np.minimum(lower, median)
         upper = np.maximum(upper, median)
     if reconcile_mode == "multiplicative":
         lower, median, upper = clamp_non_negative(lower, median, upper)
+    if range_basis == "if_rain":
+        # "If it rains" means a rainy day (>= the IMD threshold) by definition.
+        lower = np.maximum(lower, WET_DAY_THRESHOLD_MM)
+        upper = np.maximum(upper, lower)
 
     return {
+        "range_basis": range_basis,
+        "area_upper": area_upper,
         "median": median,
         "lower": lower,
         "upper": upper,

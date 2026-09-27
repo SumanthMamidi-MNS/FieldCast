@@ -1,6 +1,6 @@
 # Evaluation — ka_ghats
 
-Models trained on: `ka_ghats` · generated 2026-09-27T11:12:47
+Models trained on: `ka_ghats` · generated 2026-09-27T11:47:41
 
 Skill = 1 - MAE(model)/MAE(naive block copy). Positive beats naive. CI is a 90% cluster bootstrap (blocks at T1, gauges at T2). Coverage is for the published 80% interval (target ≈ 0.80).
 
@@ -8,7 +8,7 @@ Skill = 1 - MAE(model)/MAE(naive block copy). Positive beats naive. CI is a 90% 
 
 | Variable | n | MAE model | MAE naive | Skill | 90% CI | Served skill* | Coverage 80% | Verdict |
 |---|---:|---:|---:|---:|---|---:|---:|---|
-| Rainfall (mm) | 64,980 | 0.90 | 0.90 | 0.000 | [0.000, 0.000] | 0.000 | 0.89 | does NOT beat naive |
+| Rainfall (mm) | 64,980 | 0.90 | 0.90 | 0.000 | [0.000, 0.000] | 0.000 | 0.91 | does NOT beat naive |
 | Max temperature (°C) | 64,980 | 0.35 | 0.60 | 0.417 | [0.348, 0.489] | 0.420 | 0.89 | beats naive (significant) |
 | Min temperature (°C) | 64,980 | 0.33 | 0.50 | 0.337 | [0.247, 0.424] | 0.339 | 0.85 | beats naive (significant) |
 | Relative humidity (%) | 64,980 | 1.68 | 1.72 | 0.025 | [0.020, 0.031] | 0.025 | 0.91 | beats naive (significant) |
@@ -33,7 +33,7 @@ Rainfall occurrence: Brier 0.038 vs naive-block 0.056, Brier skill vs climatolog
 
 | Variable | n | MAE model | MAE naive | Skill | 90% CI | Served skill* | Coverage 80% | Verdict |
 |---|---:|---:|---:|---:|---|---:|---:|---|
-| Rainfall (mm) | 316 | 12.14 | 12.14 | 0.000 | [0.000, 0.000] | - | 0.79 | does NOT beat naive (only 3 gauges: significance not testable) |
+| Rainfall (mm) | 316 | 12.14 | 12.14 | 0.000 | [0.000, 0.000] | - | 0.81 | does NOT beat naive (only 3 gauges: significance not testable) |
 | Max temperature (°C) | 765 | 1.85 | 1.88 | 0.015 | [-0.035, 0.081] | - | 0.86 | beats naive (only 3 gauges: significance not testable) |
 | Min temperature (°C) | 836 | 1.15 | 1.25 | 0.087 | [0.024, 0.157] | - | 0.81 | beats naive (only 3 gauges: significance not testable) |
 

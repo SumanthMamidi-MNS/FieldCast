@@ -1,6 +1,6 @@
 # Evaluation — ka_ghats
 
-Models trained on: `mh_ghats` · generated 2026-09-27T11:13:03
+Models trained on: `mh_ghats` · generated 2026-09-27T11:49:19
 
 Skill = 1 - MAE(model)/MAE(naive block copy). Positive beats naive. CI is a 90% cluster bootstrap (blocks at T1, gauges at T2). Coverage is for the published 80% interval (target ≈ 0.80).
 
@@ -8,7 +8,7 @@ Skill = 1 - MAE(model)/MAE(naive block copy). Positive beats naive. CI is a 90% 
 
 | Variable | n | MAE model | MAE naive | Skill | 90% CI | Served skill* | Coverage 80% | Verdict |
 |---|---:|---:|---:|---:|---|---:|---:|---|
-| Rainfall (mm) | 64,980 | 0.90 | 0.90 | 0.000 | [0.000, 0.000] | 0.000 | 0.88 | does NOT beat naive |
+| Rainfall (mm) | 64,980 | 0.90 | 0.90 | 0.000 | [0.000, 0.000] | 0.000 | 0.86 | does NOT beat naive |
 | Max temperature (°C) | 64,980 | 0.48 | 0.60 | 0.201 | [0.118, 0.275] | 0.211 | 0.86 | beats naive (significant) |
 | Min temperature (°C) | 64,980 | 0.41 | 0.50 | 0.180 | [0.112, 0.246] | 0.184 | 0.87 | beats naive (significant) |
 | Relative humidity (%) | 64,980 | 1.74 | 1.72 | -0.008 | [-0.035, 0.015] | 0.010 | 0.86 | does NOT beat naive |

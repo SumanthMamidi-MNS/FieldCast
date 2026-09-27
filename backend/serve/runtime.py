@@ -393,8 +393,8 @@ class RegionRuntime:
                     block_value=round(res["block_value"], 2),
                     anomaly=round(value - res["block_value"], 2),
                     confidence=Confidence(
-                        lower=round(float(min(res["lower"][i], value)), 2),
-                        upper=round(float(max(res["upper"][i], value)), 2),
+                        lower=round(float(res["lower"][i]), 2),
+                        upper=round(float(res["upper"][i]), 2),
                         support=level,
                         support_label=support_label(level),
                         support_score=round(score, 3),
@@ -404,6 +404,7 @@ class RegionRuntime:
                     ),
                     rain_probability=round(float(occ[i]), 3) if occ is not None else None,
                     value_source="block" if self.models[key].point_is_block else "model",
+                    range_basis=res["range_basis"],
                 )
             panchayats.append(
                 PanchayatForecast(
@@ -418,7 +419,12 @@ class RegionRuntime:
                     area_km2=p["area_km2"],
                     date=day,
                     variables=variables,
-                    advisory=build_advisory(variables),
+                    advisory=build_advisory(
+                        variables,
+                        rain_area_upper=float(per_var["precip"]["area_upper"][i])
+                        if "precip" in per_var
+                        else None,
+                    ),
                 )
             )
 

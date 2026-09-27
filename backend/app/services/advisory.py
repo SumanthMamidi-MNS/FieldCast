@@ -272,11 +272,16 @@ def _disease_advice(variables: dict[str, VariableForecast]) -> AdvisoryItem | No
     return None
 
 
-def _heavy_rain_item(variables: dict[str, VariableForecast]) -> AdvisoryItem | None:
+def _heavy_rain_item(
+    variables: dict[str, VariableForecast], area_upper: float | None = None
+) -> AdvisoryItem | None:
     rain = _get(variables, "precip")
     if rain is None:
         return None
-    mm = rain.confidence.upper  # warn on the plausible high end, not the median
+    # Warn on the plausible high end, not the median. Prefer the panchayat-scale
+    # upper estimate: the published range is widened to single-gauge scale, and
+    # warning on a point extreme would flag almost every panchayat on light days.
+    mm = area_upper if area_upper is not None else rain.confidence.upper
     if mm >= THRESHOLDS.very_heavy_rain_mm:
         return AdvisoryItem(
             activity="Heavy rainfall preparedness",
@@ -362,14 +367,16 @@ def _uncertainty_statement(
     return base
 
 
-def build_advisory(variables: dict[str, VariableForecast]) -> Advisory:
+def build_advisory(
+    variables: dict[str, VariableForecast], rain_area_upper: float | None = None
+) -> Advisory:
     """Assemble the full advisory for one panchayat-day.
 
     Order matters: the most decision-changing warnings come first, because an
     officer reading on a phone in the field may not scroll.
     """
     candidates = [
-        _heavy_rain_item(variables),
+        _heavy_rain_item(variables, rain_area_upper),
         _spray_advice(variables),
         _irrigation_advice(variables),
         _harvest_advice(variables),

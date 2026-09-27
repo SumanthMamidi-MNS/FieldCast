@@ -269,3 +269,23 @@ def clamp_non_negative(
         np.maximum(median, 0.0),
         np.maximum(upper, 0.0),
     )
+
+
+def apply_scale_factor(
+    median: np.ndarray, lower: np.ndarray, upper: np.ndarray, k: float, mode: str
+) -> tuple[np.ndarray, np.ndarray]:
+    """Widen an interval around its median by the gauge-fitted point-scale factor.
+
+    Linear for every variable (a log-space variant was tried for rain and
+    exploded: gauge misses on rain are occurrence misses, which no symmetric
+    widening fixes). Rain's range is therefore an *if-it-rains* range, calibrated
+    on wet gauge-days only (see evaluate.run.calibrate_point_scale). Calibration
+    fits k through this same function, so served and calibrated ranges match.
+    """
+    median = np.asarray(median, dtype=float)
+    lower = np.asarray(lower, dtype=float)
+    upper = np.asarray(upper, dtype=float)
+    lo, hi = median - k * (median - lower), median + k * (upper - median)
+    if mode == "multiplicative":
+        lo, hi = np.maximum(lo, 0.0), np.maximum(hi, 0.0)
+    return lo, hi

@@ -2,10 +2,10 @@
   "region": "mh_ghats",
   "model_region": "mh_ghats",
   "transfer": false,
-  "generated_at": "2026-09-27T11:12:22",
+  "generated_at": "2026-09-27T11:45:00",
   "scale_calibration": {
     "precip": {
-      "factor": 5.8,
+      "factor": 5.7,
       "n": 869,
       "n_gauges": 4,
       "periods": [
@@ -104,9 +104,10 @@
         0.0
       ],
       "verdict": "does NOT beat naive",
-      "interval_coverage_80": 0.8971345533808637,
-      "interval_width": 3.2846037665962133,
-      "pit_ks": 0.48700331501748334,
+      "interval_coverage_80": 0.9172556665854253,
+      "range_basis": "if_rain",
+      "interval_width": 11.534344490469888,
+      "pit_ks": 0.12405338200024196,
       "mean_support": 0.5246576581161969,
       "baselines": {
         "B1_idw": {
@@ -196,6 +197,7 @@
       ],
       "verdict": "beats naive (significant)",
       "interval_coverage_80": 0.9141909995004768,
+      "range_basis": "all_days",
       "interval_width": 1.7076812938980495,
       "pit_ks": 0.1278058248500111,
       "mean_support": 0.5246576581161969,
@@ -233,6 +235,7 @@
       ],
       "verdict": "beats naive (significant)",
       "interval_coverage_80": 0.8921665682757368,
+      "range_basis": "all_days",
       "interval_width": 1.745485183657461,
       "pit_ks": 0.11030812580508564,
       "mean_support": 0.5246576581161969,
@@ -270,6 +273,7 @@
       ],
       "verdict": "beats naive (significant)",
       "interval_coverage_80": 0.9040552200172562,
+      "range_basis": "all_days",
       "interval_width": 7.294033598262025,
       "pit_ks": 0.12441687312399885,
       "mean_support": 0.5246576581161969,
@@ -303,6 +307,7 @@
       ],
       "verdict": "beats naive (significant)",
       "interval_coverage_80": 0.9186957903819082,
+      "range_basis": "all_days",
       "interval_width": 5.793810505135944,
       "pit_ks": 0.13433764446944235,
       "mean_support": 0.5246576581161969,
@@ -337,9 +342,10 @@
         0.0
       ],
       "verdict": "does NOT beat naive (only 4 gauges: significance not testable)",
-      "interval_coverage_80": 0.821656050955414,
-      "interval_width": 57.10321463018053,
-      "pit_ks": 0.16243692613119365,
+      "interval_coverage_80": 0.804,
+      "range_basis": "if_rain",
+      "interval_width": 83.99724398033462,
+      "pit_ks": 0.20452278766565252,
       "mean_support": 0.7797973445160705,
       "baselines": {},
       "occurrence": {
@@ -422,6 +428,7 @@
       ],
       "verdict": "beats naive (only 4 gauges: significance not testable)",
       "interval_coverage_80": 0.8852988691437803,
+      "range_basis": "all_days",
       "interval_width": 9.591697916956822,
       "pit_ks": 0.3059179994567333,
       "mean_support": 0.6401401234160641,
@@ -453,6 +460,7 @@
       ],
       "verdict": "beats naive (only 4 gauges: significance not testable)",
       "interval_coverage_80": 0.7401574803149606,
+      "range_basis": "all_days",
       "interval_width": 5.049696016369826,
       "pit_ks": 0.1346456692913386,
       "mean_support": 0.7999089548832269,

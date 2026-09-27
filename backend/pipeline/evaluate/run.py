@@ -52,6 +52,7 @@ from backend.pipeline.geo.terrain import terrain_features
 from backend.pipeline.models.downscaler import mixture_quantiles
 from backend.pipeline.models.predictor import Predictor, build_target_features
 from backend.pipeline.models.reconcile import reconcile, reconcile_two_stage
+from backend.pipeline.models.uncertainty import apply_scale_factor
 
 app = typer.Typer(add_completion=False)
 console = Console()
@@ -175,8 +176,17 @@ def _variable_report(
     s = skill_score(m.mae, naive.mae)
     lo, hi = cluster_bootstrap_skill(y, median, block_value, clusters)
 
-    cov, width = interval_coverage(y, pred["lower"], pred["upper"])
-    pit = pit_uniformity(pit_values(y, {0.1: pred["lower"], 0.5: median, 0.9: pred["upper"]}))
+    if pred.get("range_basis") == "if_rain":
+        # Rain's published range is "if it rains": score it on wet days only.
+        wet = y >= WET_DAY_THRESHOLD_MM
+        centre = pred["conditional"][0.5]
+        cov, width = interval_coverage(y[wet], pred["lower"][wet], pred["upper"][wet])
+        pit = pit_uniformity(
+            pit_values(y[wet], {0.1: pred["lower"][wet], 0.5: centre[wet], 0.9: pred["upper"][wet]})
+        )
+    else:
+        cov, width = interval_coverage(y, pred["lower"], pred["upper"])
+        pit = pit_uniformity(pit_values(y, {0.1: pred["lower"], 0.5: median, 0.9: pred["upper"]}))
 
     out: dict = {
         "variable": key,
@@ -193,6 +203,7 @@ def _variable_report(
         "skill_ci90": [lo, hi],
         "verdict": _verdict(s, lo, int(np.unique(clusters).size)),
         "interval_coverage_80": cov,
+        "range_basis": pred.get("range_basis", "all_days"),
         "interval_width": width,
         "pit_ks": pit,
         "mean_support": float(np.nanmean(pred["support_score"])),
@@ -398,12 +409,19 @@ def calibrate_point_scale(
     for key, (rows, feats) in data.items():
         pred = predictor.predict_variable(key, feats, Tier.T2, apply_scale_calibration=False)
         y = rows["value"].to_numpy(dtype=float)
-        m, lo, hi = pred["median"], pred["lower"], pred["upper"]
+        if pred.get("range_basis") == "if_rain":
+            # An if-it-rains range is calibrated on days the gauge actually got rain.
+            wet = y >= WET_DAY_THRESHOLD_MM
+            y = y[wet]
+            cond = pred["conditional"]
+            m, lo, hi = cond[0.5][wet], pred["lower"][wet], pred["upper"][wet]
+            if y.size < 30:
+                continue
+        else:
+            m, lo, hi = pred["median"], pred["lower"], pred["upper"]
         k_best = float(grid_k[-1])
         for k in grid_k:
-            lo_k, hi_k = m - k * (m - lo), m + k * (hi - m)
-            if VARIABLES[key].reconcile == "multiplicative":
-                lo_k = np.maximum(lo_k, 0.0)
+            lo_k, hi_k = apply_scale_factor(m, lo, hi, float(k), VARIABLES[key].reconcile)
             if np.mean((y >= lo_k) & (y <= hi_k)) >= 0.80:
                 k_best = float(k)
                 break

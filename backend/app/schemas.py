@@ -70,6 +70,14 @@ class VariableForecast(BaseModel):
     rain_probability: float | None = Field(
         default=None, ge=0, le=1, description="P(measurable rain) — precipitation only"
     )
+    range_basis: str = Field(
+        default="all_days",
+        description=(
+            "'all_days': confidence.lower/upper is the likely range of the value. "
+            "'if_rain': for rain, the likely amount on a day it rains (>=2.5 mm); "
+            "read it together with rain_probability."
+        ),
+    )
     value_source: str = Field(
         default="model",
         description=(

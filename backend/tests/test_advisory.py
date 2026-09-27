@@ -214,3 +214,13 @@ def _actions_reason(advisory, activity: str) -> str:
         if i.activity == activity:
             return i.reason
     pytest.fail(f"no advisory item for {activity}")
+
+
+def test_heavy_rain_warning_uses_area_scale_estimate_when_given():
+    """The published range is point-scale; area warnings use the panchayat estimate."""
+    variables = {"precip": _var("precip", 2.0, rain_prob=0.5, lower=0.0, upper=88.0)}
+    assert "Heavy rainfall preparedness" in _actions(build_advisory(variables))
+    calm = build_advisory(variables, rain_area_upper=12.0)
+    assert "Heavy rainfall preparedness" not in _actions(calm)
+    wet = build_advisory(variables, rain_area_upper=90.0)
+    assert "Heavy rainfall preparedness" in _actions(wet)

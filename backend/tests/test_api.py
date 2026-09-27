@@ -249,8 +249,13 @@ def test_every_value_carries_interval_tier_and_support(served):
         assert p.advisory.uncertainty_statement
         assert p.unit_type == "village_cluster"
         for v in p.variables.values():
-            assert v.confidence.lower <= v.value <= v.confidence.upper
+            assert v.confidence.lower <= v.confidence.upper
+            if v.range_basis == "all_days":
+                assert v.confidence.lower <= v.value <= v.confidence.upper
             assert v.confidence.tier == "T3"
+        # Rain is two statements: a chance, and an amount range if it rains.
+        assert p.variables["precip"].range_basis == "if_rain"
+        assert p.variables["tmax"].range_basis == "all_days"
         assert p.variables["precip"].rain_probability is not None
         assert p.variables["tmax"].rain_probability is None
 
@@ -392,8 +397,16 @@ def test_runtime_honours_block_value_policy_but_keeps_rain_chance(served, monkey
     resp = served.forecast(BLOCK, date(2023, 7, 15), INPUT)
     rain = [p.variables["precip"] for p in resp.panchayats]
     assert all(v.value == pytest.approx(INPUT["precip"]) for v in rain)
-    assert all(v.confidence.lower <= v.value <= v.confidence.upper for v in rain)
+    assert all(v.confidence.lower <= v.confidence.upper for v in rain)
     assert all(v.value_source == "block" for v in rain)
     assert all(p.variables["tmax"].value_source == "model" for p in resp.panchayats)
     probs = {v.rain_probability for v in rain}
     assert len(probs) > 1, "rain chance must still differ between panchayats"
+
+
+def test_if_rain_range_starts_at_the_rainy_day_threshold(served):
+    from backend.config import WET_DAY_THRESHOLD_MM
+
+    resp = served.forecast(BLOCK, date(2023, 7, 15), {**INPUT, "precip": 1.0})
+    for p in resp.panchayats:
+        assert p.variables["precip"].confidence.lower >= WET_DAY_THRESHOLD_MM
