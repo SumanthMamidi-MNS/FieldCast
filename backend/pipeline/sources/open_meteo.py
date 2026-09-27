@@ -94,6 +94,7 @@ def _http_get_json(url: str, params: dict) -> dict | list:
             reason = str(resp.json().get("reason", ""))
         except ValueError:
             reason = resp.text[:200]
+        print(f"[{time.strftime('%H:%M:%S')}] Open-Meteo 429: {reason.strip()!r}", flush=True)
         if "Minutely" in reason or not reason:
             # Short-window limit: wait it out, then let tenacity retry.
             time.sleep(61)

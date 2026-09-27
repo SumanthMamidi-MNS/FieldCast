@@ -21,7 +21,7 @@ from backend.pipeline.sources.open_meteo import ApiBudgetExceeded
 from backend.pipeline.train import build_grid_for_region, fetch_weather_panel
 
 app = typer.Typer(add_completion=False)
-console = Console()
+console = Console(log_time=True)
 
 _RETRY_SLEEP_S = 30 * 60
 
@@ -45,12 +45,12 @@ def run(
         for season in ordered:
             while True:
                 try:
-                    console.print(f"[cyan]{key}[/cyan] {season.label}: {len(points)} points")
+                    console.log(f"[cyan]{key}[/cyan] {season.label}: {len(points)} points")
                     fetch_weather_panel(points, ((season.start, season.end),))
-                    console.print(f"  [green]cached[/green] {key} {season.label}")
+                    console.log(f"[green]cached[/green] {key} {season.label}")
                     break
                 except ApiBudgetExceeded as exc:
-                    console.print(f"  [yellow]{exc} — sleeping {_RETRY_SLEEP_S // 60} min[/yellow]")
+                    console.log(f"[yellow]{exc} — sleeping {_RETRY_SLEEP_S // 60} min[/yellow]")
                     time.sleep(_RETRY_SLEEP_S)
     console.print("[bold green]all seasons cached[/bold green]")
 
