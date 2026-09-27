@@ -12,6 +12,7 @@ from a quick run are not reportable and the CLI says so on every run.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 
 import geopandas as gpd
@@ -42,6 +43,7 @@ from backend.pipeline.features.build import (
 from backend.pipeline.geo.terrain import terrain_features
 from backend.pipeline.models.downscaler import MODEL_VERSION, VariableDownscaler
 from backend.pipeline.models.uncertainty import SupportModel
+from backend.pipeline.sources.cache import OfflineCacheMiss, is_offline
 from backend.pipeline.sources.open_meteo import fetch_daily_weather
 
 app = typer.Typer(add_completion=False)
@@ -78,6 +80,10 @@ def attach_terrain(points: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([points.reset_index(drop=True), terrain.reset_index(drop=True)], axis=1)
 
 
+# Seasons skipped because their data was not fully cached (available-only runs).
+SKIPPED_SEASONS: list[tuple[str, str]] = []
+
+
 def fetch_weather_panel(
     points: pd.DataFrame, seasons: tuple[tuple[str, str], ...]
 ) -> pd.DataFrame:
@@ -85,6 +91,9 @@ def fetch_weather_panel(
 
     Seasons are fetched separately so each caches independently: a run that hits
     the daily API budget part-way resumes from the cache on the next attempt.
+    In offline mode a season that is not fully cached is skipped and recorded in
+    SKIPPED_SEASONS rather than failing the run, so training can proceed on
+    whatever history is complete.
     """
     daily_vars = [v.open_meteo_daily for v in VARIABLES.values()]
     frames = []
@@ -92,11 +101,19 @@ def fetch_weather_panel(
         console.print(
             f"  fetching {len(daily_vars)} variables x {len(points)} points, {start} to {end}..."
         )
-        frames.append(
-            fetch_daily_weather(
-                points["lat"].tolist(), points["lon"].tolist(), start, end, daily_vars=daily_vars
+        try:
+            frames.append(
+                fetch_daily_weather(
+                    points["lat"].tolist(), points["lon"].tolist(), start, end, daily_vars=daily_vars
+                )
             )
-        )
+        except OfflineCacheMiss:
+            if not is_offline():
+                raise
+            console.print(f"  [yellow]not fully cached yet, skipped: {start} to {end}[/yellow]")
+            SKIPPED_SEASONS.append((start, end))
+    if not frames:
+        raise ValueError("no season in the requested set is available")
     return pd.concat(frames, ignore_index=True)
 
 
@@ -228,6 +245,7 @@ def train_region(
         build_gauge_tables(region, points)
     points.to_parquet(PROCESSED_DIR / f"grid_{region.key}.parquet", index=False)
 
+    summary["skipped_seasons"] = [list(s) for s in SKIPPED_SEASONS]
     (artifact_root / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
 
@@ -242,7 +260,11 @@ def build_gauge_tables(region: Region, points: pd.DataFrame) -> None:
     seasons = tuple((s.start, s.end) for s in TRAINING_WINDOW.gauge_seasons)
     if not seasons:
         return
-    panel = assemble_panel(points, fetch_weather_panel(points, seasons))
+    try:
+        panel = assemble_panel(points, fetch_weather_panel(points, seasons))
+    except ValueError:
+        console.print("  [yellow]historical gauge seasons not available yet; skipped[/yellow]")
+        return
     for key in VARIABLES:
         variable_table(panel, key).to_parquet(
             PROCESSED_DIR / f"features_hist_{region.key}_{key}.parquet", index=False
@@ -309,7 +331,12 @@ def run(
         TRAINING_WINDOW.grid_step_deg, help="Fine grid spacing in degrees"
     ),
     features_only: bool = typer.Option(False, help="Build feature tables without training"),
+    available_only: bool = typer.Option(
+        False, help="Use only fully cached seasons (offline; never spends API quota)"
+    ),
 ) -> None:
+    if available_only:
+        os.environ["DOWNSCALE_OFFLINE"] = "1"
     if region not in REGIONS:
         raise typer.BadParameter(f"unknown region {region!r}; have {sorted(REGIONS)}")
 

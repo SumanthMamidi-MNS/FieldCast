@@ -16,7 +16,7 @@ import geopandas as gpd
 import typer
 from rich.console import Console
 
-from backend.config import PROCESSED_DIR, REGIONS, TRAINING_WINDOW
+from backend.config import PROCESSED_DIR, REGIONS, TRAINING_WINDOW, Season
 from backend.pipeline.sources.open_meteo import ApiBudgetExceeded
 from backend.pipeline.train import build_grid_for_region, fetch_weather_panel
 
@@ -26,32 +26,51 @@ console = Console(log_time=True)
 _RETRY_SLEEP_S = 30 * 60
 
 
+# Seasons from this date on are "recent" training data, fetched before the
+# historical gauge seasons; older training seasons come last.
+_RECENT_FROM = "2021-01-01"
+
+
+def fetch_plan(regions: list[str]) -> list[tuple[str, Season]]:
+    """(region, season) jobs in order of value, across regions.
+
+    With a ~10k/day quota the full history takes days, so order matters: test
+    seasons first (nothing can be evaluated without them), then recent training
+    seasons (enough for a complete model), then the historical gauge seasons
+    (the ~100-gauge test and interval calibration), then older training seasons.
+    Training can run on whatever is complete at any point.
+    """
+    train = sorted(TRAINING_WINDOW.train_seasons, key=lambda s: s.start, reverse=True)
+    tiers = [
+        list(TRAINING_WINDOW.test_seasons),
+        [s for s in train if s.start >= _RECENT_FROM],
+        list(TRAINING_WINDOW.gauge_seasons),
+        [s for s in train if s.start < _RECENT_FROM],
+    ]
+    return [(key, season) for tier in tiers for key in regions for season in tier]
+
+
 @app.command()
 def run(
     region: list[str] = typer.Option(["mh_ghats"], help="Region keys, in priority order"),
     step_deg: float = typer.Option(TRAINING_WINDOW.grid_step_deg),
 ) -> None:
-    # Test seasons first: without them nothing can be evaluated. Then training
-    # seasons, most recent first.
-    ordered = sorted(TRAINING_WINDOW.seasons, key=lambda s: (not s.test, s.start), reverse=False)
-    ordered = [s for s in ordered if s.test] + sorted(
-        [s for s in ordered if not s.test], key=lambda s: s.start, reverse=True
-    )
-    # Historical gauge seasons last: they only feed evaluation and calibration.
-    ordered += list(TRAINING_WINDOW.gauge_seasons)
+    grids = {}
     for key in region:
         blocks = gpd.read_parquet(PROCESSED_DIR / f"blocks_{REGIONS[key].key}.parquet")
-        points = build_grid_for_region(blocks, step_deg=step_deg)
-        for season in ordered:
-            while True:
-                try:
-                    console.log(f"[cyan]{key}[/cyan] {season.label}: {len(points)} points")
-                    fetch_weather_panel(points, ((season.start, season.end),))
-                    console.log(f"[green]cached[/green] {key} {season.label}")
-                    break
-                except ApiBudgetExceeded as exc:
-                    console.log(f"[yellow]{exc} — sleeping {_RETRY_SLEEP_S // 60} min[/yellow]")
-                    time.sleep(_RETRY_SLEEP_S)
+        grids[key] = build_grid_for_region(blocks, step_deg=step_deg)
+
+    for key, season in fetch_plan(region):
+        points = grids[key]
+        while True:
+            try:
+                console.log(f"[cyan]{key}[/cyan] {season.label}: {len(points)} points")
+                fetch_weather_panel(points, ((season.start, season.end),))
+                console.log(f"[green]cached[/green] {key} {season.label}")
+                break
+            except ApiBudgetExceeded as exc:
+                console.log(f"[yellow]{exc} — sleeping {_RETRY_SLEEP_S // 60} min[/yellow]")
+                time.sleep(_RETRY_SLEEP_S)
     console.print("[bold green]all seasons cached[/bold green]")
 
 
