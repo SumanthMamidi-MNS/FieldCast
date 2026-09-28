@@ -108,6 +108,22 @@ def test_fetch_daily_weather_repeat_call_is_served_from_cache_not_network():
 
 
 @respx.mock
+def test_fetch_daily_weather_retries_an_empty_response_body():
+    calls = []
+
+    def flaky(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, content=b"") if len(calls) == 1 else _archive_response_for(request)
+
+    route = respx.get(open_meteo.ARCHIVE_URL).mock(side_effect=flaky)
+
+    df = open_meteo.fetch_daily_weather([18.5], [73.8], "2023-01-01", "2023-01-02")
+
+    assert route.call_count == 2  # the empty body was retried, not fatal
+    assert not df.empty
+
+
+@respx.mock
 def test_fetch_elevation_chunks_at_one_hundred_points():
     def elevation_response(request: httpx.Request) -> httpx.Response:
         params = dict(httpx.QueryParams(request.url.query))

@@ -104,7 +104,14 @@ def _http_get_json(url: str, params: dict) -> dict | list:
             "re-run after the limit resets to resume."
         )
     resp.raise_for_status()
-    return resp.json()
+    try:
+        return resp.json()
+    except ValueError as exc:
+        # A truncated or empty body is a transient server fault: retry it like one.
+        raise httpx.DecodingError(
+            f"Open-Meteo returned an unreadable body ({len(resp.content)} bytes)",
+            request=resp.request,
+        ) from exc
 
 
 def _fetch_weather_chunk(
