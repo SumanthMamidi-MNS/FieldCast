@@ -282,7 +282,7 @@ statement.
 |---|---|---|
 | **T1** | Does it recover the fine grid from the block value? | held-out seasons, dense grid |
 | **T2** | Is it closer to real gauges than the block value? | 4 modern gauges, test seasons |
-| **T2 historical** | Same, with enough gauges to test significance | ~100 gauges per state, 1960 monsoon |
+| **T2 historical** | Same, with ~25x more gauges | 97 (MH) / 100 (KA) rain gauges, 1960 monsoon |
 | **Transfer** | Does a Maharashtra model work in Karnataka? | KA test seasons, MH models |
 
 - **Baselines**: naive block copy (the bar), IDW of block values, lapse-rate
@@ -294,9 +294,17 @@ statement.
 - **Honesty rules**: no "significant" verdict with fewer than 8 gauges; losses
   are reported like wins; block-served variables report skill 0 by design plus
   the model's own validation and test skill.
-- **Point-scale calibration**: fitted on the 1958 gauge season (fallback: the
-  training seasons' modern gauges), written to `scale_calibration.json`, then
+- **Historical gauge network**: `build_base` screens the 1958/1960 records of
+  every GHCN station in the region into `stations_hist_<region>.parquet`
+  (>=122 valid rain days). Today's `stations_<region>.parquet` is unchanged: it
+  feeds the support score's gauge distance, which closed gauges must not shorten.
+- **Point-scale calibration**: rain is fitted on the 1958 season (~100 gauges);
+  any variable with fewer than 3 historical gauges (temperature) is fitted on
+  the training seasons' modern gauges. Written to `scale_calibration.json`, then
   evaluated on separate seasons.
+- **Latest gauge results** (rain / no-rain Brier vs block; wet-day coverage of
+  the if-it-rains range): 1960 MH 0.245 vs 0.310, 82%; KA 0.285 vs 0.350, 85%.
+  2022-23 modern gauges MH 0.225 vs 0.293, 82%; KA 0.256 vs 0.313, 78%.
 
 Outputs: `reports/evaluation_<region>.md|json` and
 `reports/evaluation_ka_ghats_from_mh_ghats.*` (transfer).

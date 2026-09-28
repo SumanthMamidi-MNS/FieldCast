@@ -90,7 +90,7 @@ BADGES = [
     ("coverage", "Coverage", "9,802 Panchayats", "#C084FC", "#9333EA", "#6B21A8", "rgba(192, 132, 252, 0.45)", ICONS["coverage"], False),
     ("console", "Dashboard", "React + MapLibre", "#22D3EE", "#0891B2", "#0E7490", "rgba(34, 211, 238, 0.45)", ICONS["console"], False),
     ("offline", "Engine", "NumPy ~100ms", "#FDBA74", "#EA580C", "#9A3412", "rgba(251, 146, 60, 0.45)", ICONS["offline"], False),
-    ("tests", "Tests", "408 Passing", "#059669", "#047857", "#064E3B", "rgba(52, 211, 153, 0.7)", ICONS["tests"], True),
+    ("tests", "Tests", "410 Passing", "#059669", "#047857", "#064E3B", "rgba(52, 211, 153, 0.7)", ICONS["tests"], True),
     ("license", "License", "MIT", "#D4D4D4", "#737373", "#404040", "rgba(163, 163, 163, 0.45)", ICONS["license"], False),
 ]
 

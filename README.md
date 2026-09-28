@@ -9,12 +9,12 @@
 <p align="center">
   <a href="https://www.python.org/"><img src="docs/assets/badges/python.svg" alt="Python 3.12" height="30"></a>
   <a href="https://fastapi.tiangolo.com"><img src="docs/assets/badges/fastapi.svg" alt="FastAPI REST" height="30"></a>
-  <a href="docs/backend.md#modelling"><img src="docs/assets/badges/downscale.svg" alt="Downscaling: LightGBM" height="30"></a>
+  <a href="docs/backend.md#9-models-modelsdownscalerpy"><img src="docs/assets/badges/downscale.svg" alt="Downscaling: LightGBM" height="30"></a>
   <a href="docs/architecture.md"><img src="docs/assets/badges/orography.svg" alt="Orographic: 245-deg Rain Shadow" height="30"></a>
-  <a href="docs/backend.md#geographic-coverage"><img src="docs/assets/badges/coverage.svg" alt="Coverage: 9,802 Panchayats" height="30"></a>
+  <a href="docs/backend.md#6-geography"><img src="docs/assets/badges/coverage.svg" alt="Coverage: 9,802 Panchayats" height="30"></a>
   <a href="docs/frontend.md"><img src="docs/assets/badges/console.svg" alt="Dashboard: React + MapLibre" height="30"></a>
-  <a href="docs/decisions.md#numpy-only-serving"><img src="docs/assets/badges/offline.svg" alt="Engine: NumPy ~100ms" height="30"></a>
-  <a href="backend/tests/"><img src="docs/assets/badges/tests.svg" alt="408 Passing" height="30"></a>
+  <a href="docs/backend.md#13-serving"><img src="docs/assets/badges/offline.svg" alt="Engine: NumPy ~100ms" height="30"></a>
+  <a href="backend/tests/"><img src="docs/assets/badges/tests.svg" alt="410 Passing" height="30"></a>
   <a href="LICENSE"><img src="docs/assets/badges/license.svg" alt="MIT License" height="30"></a>
 </p>
 
@@ -150,10 +150,12 @@ better. 90% confidence intervals come from cluster bootstraps.
 | Rain / no-rain error (Brier) | **0.026** vs 0.043 (**40% lower**) | **0.038** vs 0.056 (**32% lower**) |
 | Rain amount | block value served | block value served |
 
-- **At real rain gauges never used in training**, the rain / no-rain call is
-  23% better than the block forecast in Maharashtra and 18% better in Karnataka.
-  Also, 80–81% of wet gauge-days fall inside the published range, against a
-  target of 80%.
+- **Against ~100 real rain gauges per state** (1960 monsoon: 97 in Maharashtra,
+  100 in Karnataka, never used in training), the rain / no-rain call is **21%**
+  and **19%** better than the block forecast, and **82%** and **85%** of rainy
+  days fall inside the published range (target 80%, calibrated on 1958).
+- **At today's few gauges** (2022-23, 3–4 per state), the rain / no-rain call is
+  23% and 18% better, with 82% and 78% of rainy days inside the range.
 - **Rain amounts did not beat the block value**, so FieldCast serves the
   official amount and adds the panchayat's own rain chance and range. Nothing
   served was worse than the block forecast on validation.
@@ -171,7 +173,7 @@ better. 90% confidence intervals come from cluster bootstraps.
 | Modelling | Python · LightGBM (quantile regression) · scikit-learn (isotonic calibration) · pandas · GeoPandas · Shapely |
 | API | FastAPI · pydantic · numpy-only runtime |
 | Dashboard | React 18 · TypeScript (strict) · Vite · MapLibre GL · OpenStreetMap |
-| Quality | 231 pytest + 177 Vitest tests · Ruff · ESLint |
+| Quality | 233 pytest + 177 Vitest tests · Ruff · ESLint |
 
 ## Getting started
 
@@ -222,9 +224,9 @@ docs/           architecture, design decisions, flowchart
 
 - Panchayat-level values are inference: no panchayat-scale measurements exist to
   check them against, and every response says so.
-- Modern rain gauges are scarce (3–4 per state in these blocks), so gauge
-  results are not yet statistically significant. A ~100-gauge historical test is
-  built into the evaluation.
+- Modern rain gauges are scarce (3–4 per state in these blocks), so the
+  ~100-gauge check uses the 1960 monsoon, when the reanalysis drew on fewer
+  observations. Temperature has no historical gauges and is checked at 3–4.
 - The models learn from ERA5 reanalysis, not IMD operational forecasts. IMD
   bulletins can be supplied at run time.
 - About 5% of villages have no LGD gram-panchayat match and are served as
