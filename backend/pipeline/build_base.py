@@ -10,6 +10,7 @@ to: "one command builds the full regional geo+station base offline from cache."
 
 from __future__ import annotations
 
+import pandas as pd
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -25,6 +26,29 @@ from backend.pipeline.sources.ghcn import (
 
 app = typer.Typer(add_completion=False)
 console = Console()
+
+# A historical gauge season is one monsoon (122 days); a station counts if it
+# reported on at least half of the days across the gauge seasons.
+HIST_MIN_VALID_OBS = 122
+
+
+def build_historical_station_index(region_key: str, stations: pd.DataFrame) -> int:
+    """Stations with usable records in the historical gauge seasons (1958, 1960).
+
+    Kept apart from `stations_<region>.parquet`, which lists today's gauges and
+    feeds the support score's distance-to-gauge: a gauge that closed decades ago
+    must not make a panchayat look well observed today.
+    """
+    ids = stations["station_id"].tolist()
+    frames = [
+        load_station_daily(ids, s.start, s.end, elements=["PRCP"])
+        for s in TRAINING_WINDOW.gauge_seasons
+    ]
+    daily = pd.concat(frames, ignore_index=True)
+    good = screen_stations_by_record_quality(daily, ids, min_valid_obs=HIST_MIN_VALID_OBS)
+    hist = stations[stations["station_id"].isin(good)].reset_index(drop=True)
+    hist.to_parquet(PROCESSED_DIR / f"stations_hist_{region_key}.parquet")
+    return len(hist)
 
 
 @app.command("build-base")
@@ -72,6 +96,8 @@ def build_base(
     console.print(
         f"  {len(stations)} stations in bbox, {len(stations_screened)} passed the record-quality screen"
     )
+    n_hist = build_historical_station_index(cfg.key, stations)
+    console.print(f"  {n_hist} stations with usable 1958/1960 monsoon records (historical test)")
 
     area_km2 = blocks.to_crs(METRIC_CRS).geometry.area.sum() / 1e6
 

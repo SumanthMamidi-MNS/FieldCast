@@ -327,7 +327,10 @@ def gauge_datasets(
     """
     from backend.pipeline.sources.ghcn import load_station_daily
 
-    st_path = PROCESSED_DIR / f"stations_{region_key}.parquet"
+    # Historical periods are scored on the historical gauge network; today's
+    # periods on today's gauges.
+    historical = max(p[1] for p in periods) < TRAINING_WINDOW.start
+    st_path = PROCESSED_DIR / f"stations_{'hist_' if historical else ''}{region_key}.parquet"
     if not st_path.exists():
         return {}
     stations = pd.read_parquet(st_path)
@@ -347,8 +350,13 @@ def gauge_datasets(
     inside = _station_terrain(inside)
 
     elements = sorted({v.ghcn_element for v in VARIABLES.values() if v.ghcn_element})
+    # Read the station records over the requested periods themselves: the
+    # historical gauge seasons (1958, 1960) lie outside the training window.
     obs = load_station_daily(
-        inside["station_id"].tolist(), TRAINING_WINDOW.start, TRAINING_WINDOW.end, elements=elements
+        inside["station_id"].tolist(),
+        min(p[0] for p in periods),
+        max(p[1] for p in periods),
+        elements=elements,
     )
     obs["date"] = pd.to_datetime(obs["date"])
     obs = obs[_in_periods(obs["date"], periods)]
@@ -388,6 +396,10 @@ def gauge_datasets(
         )
         out[key] = (rows, feats)
     return out
+
+
+# A calibration factor fitted on fewer gauges than this describes a site, not a region.
+MIN_CALIBRATION_GAUGES = 3
 
 
 def calibrate_point_scale(
@@ -562,9 +574,18 @@ def run(
     # Calibration is fitted only on the model's own region, on seasons outside the
     # test set, so the held-out evaluation below stays out-of-sample.
     if not transfer and recalibrate and calib_periods:
-        console.print("[bold]Calibrating point-scale intervals[/bold] on training seasons")
+        console.print(f"[bold]Calibrating point-scale intervals[/bold] on {calib_periods[0][0][:4]}+")
         raw = Predictor.load(region, model_region_key=model_region)
         calib = calibrate_point_scale(region, raw, calib_periods)
+        train_periods = tuple((s.start, s.end) for s in TRAINING_WINDOW.train_seasons)
+        thin = [k for k, v in calib.items() if v["n_gauges"] < MIN_CALIBRATION_GAUGES]
+        if calib_periods != train_periods and (thin or len(calib) < 3):
+            # The historical network is almost all rain gauges: a variable with
+            # too few historical gauges is calibrated on today's gauges instead.
+            console.print("  [yellow]thin historical coverage; filling from training seasons[/yellow]")
+            modern = calibrate_point_scale(region, raw, train_periods)
+            calib = {k: v for k, v in calib.items() if k not in thin}
+            calib.update({k: v for k, v in modern.items() if k not in calib})
         calib_path.write_text(json.dumps(calib, indent=2), encoding="utf-8")
 
     predictor = Predictor.load(region, model_region_key=model_region)
