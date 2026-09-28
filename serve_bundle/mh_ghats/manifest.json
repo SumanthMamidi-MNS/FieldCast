@@ -11,7 +11,7 @@
   "Sangli"
  ],
  "model_version": "0.2.0",
- "generated_at": "2026-09-27T12:13:05",
+ "generated_at": "2026-09-28T12:48:05",
  "quantiles": [
   0.1,
   0.5,
@@ -51,7 +51,7 @@
    ],
    "occurrence": true,
    "calibrated_occurrence": true,
-   "scale_factor": 5.7,
+   "scale_factor": 6.15,
    "point_is_block": true
   },
   "tmax": {

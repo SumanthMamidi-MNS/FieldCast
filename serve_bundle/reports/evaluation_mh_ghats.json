@@ -2,32 +2,16 @@
   "region": "mh_ghats",
   "model_region": "mh_ghats",
   "transfer": false,
-  "generated_at": "2026-09-27T11:45:00",
+  "generated_at": "2026-09-28T12:12:24",
   "scale_calibration": {
     "precip": {
-      "factor": 5.7,
-      "n": 869,
-      "n_gauges": 4,
+      "factor": 6.15,
+      "n": 11802,
+      "n_gauges": 97,
       "periods": [
         [
-          "2019-06-01",
-          "2019-09-30"
-        ],
-        [
-          "2020-06-01",
-          "2020-09-30"
-        ],
-        [
-          "2021-06-01",
-          "2021-09-30"
-        ],
-        [
-          "2021-10-01",
-          "2022-05-31"
-        ],
-        [
-          "2022-06-01",
-          "2022-09-30"
+          "1958-06-01",
+          "1958-09-30"
         ]
       ]
     },
@@ -261,30 +245,30 @@
       "unit": "%",
       "n": 110105,
       "n_clusters": 80,
-      "model_mae": 1.573568447041134,
-      "model_rmse": 2.170254547494664,
-      "model_bias": -0.028013500338101426,
+      "model_mae": 1.57292678517914,
+      "model_rmse": 2.1698689987688313,
+      "model_bias": -0.028655162200095282,
       "naive_mae": 1.95248358168934,
       "naive_rmse": 2.67640547257178,
-      "skill_vs_naive": 0.19406828216212646,
+      "skill_vs_naive": 0.19439692096247874,
       "skill_ci90": [
-        0.1561322798099859,
-        0.22710125739924328
+        0.15662798133136327,
+        0.22748686110629418
       ],
       "verdict": "beats naive (significant)",
       "interval_coverage_80": 0.9040552200172562,
       "range_basis": "all_days",
-      "interval_width": 7.294033598262025,
+      "interval_width": 7.279255610256858,
       "pit_ks": 0.12441687312399885,
       "mean_support": 0.5246576581161969,
       "baselines": {
         "B1_idw": {
           "mae": 1.7840702866999856,
-          "model_skill_vs_this": 0.1179896561408571
+          "model_skill_vs_this": 0.11834931790237935
         }
       },
-      "reconciled_mae": 1.5685666646313687,
-      "reconciled_skill_vs_naive": 0.19663003605172258,
+      "reconciled_mae": 1.568291718121158,
+      "reconciled_skill_vs_naive": 0.19677085491073332,
       "point_is_block": false,
       "validation_served_skill": 0.0512,
       "raw_model_skill_vs_naive": 0.19406828216212646
@@ -342,10 +326,10 @@
         0.0
       ],
       "verdict": "does NOT beat naive (only 4 gauges: significance not testable)",
-      "interval_coverage_80": 0.804,
+      "interval_coverage_80": 0.82,
       "range_basis": "if_rain",
-      "interval_width": 83.99724398033462,
-      "pit_ks": 0.20452278766565252,
+      "interval_width": 90.34579354770392,
+      "pit_ks": 0.2044845349096292,
       "mean_support": 0.7797973445160705,
       "baselines": {},
       "occurrence": {
@@ -475,5 +459,91 @@
       "raw_model_skill_vs_naive": 0.17605830551146773
     }
   },
-  "T2_hist": {}
+  "T2_hist": {
+    "precip": {
+      "variable": "precip",
+      "label": "Rainfall",
+      "unit": "mm",
+      "n": 11709,
+      "n_clusters": 97,
+      "model_mae": 9.668012185715234,
+      "model_rmse": 21.24411861635797,
+      "model_bias": -1.0556367371727355,
+      "naive_mae": 9.668012185715234,
+      "naive_rmse": 21.24411861635797,
+      "skill_vs_naive": 0.0,
+      "skill_ci90": [
+        0.0,
+        0.0
+      ],
+      "verdict": "does NOT beat naive",
+      "interval_coverage_80": 0.823541887592789,
+      "range_basis": "if_rain",
+      "interval_width": 69.24709266262968,
+      "pit_ks": 0.16606574761399784,
+      "mean_support": 0.5323349815866656,
+      "baselines": {},
+      "occurrence": {
+        "brier": 0.24499685979926136,
+        "brier_skill_vs_climatology": -0.018574512780088037,
+        "brier_naive_block": 0.30967631736271245,
+        "base_rate": 0.40268169783926894,
+        "reliability": [
+          [
+            0.014702942397818964,
+            0.10260290556900727,
+            3304
+          ],
+          [
+            0.14280712378569987,
+            0.16241299303944315,
+            431
+          ],
+          [
+            0.24480650542963736,
+            0.16904761904761906,
+            420
+          ],
+          [
+            0.3465683585034118,
+            0.22346368715083798,
+            358
+          ],
+          [
+            0.47269743858199664,
+            0.19205298013245034,
+            151
+          ],
+          [
+            0.5441731753523772,
+            0.27628865979381445,
+            485
+          ],
+          [
+            0.6310855878652636,
+            0.2986425339366516,
+            221
+          ],
+          [
+            0.7741673132350858,
+            0.34305317324185247,
+            583
+          ],
+          [
+            0.8366382680218459,
+            0.3333333333333333,
+            378
+          ],
+          [
+            0.9849859987282806,
+            0.6693938267013759,
+            5378
+          ]
+        ]
+      },
+      "point_is_block": true,
+      "validation_served_skill": -0.0745,
+      "raw_model_skill_vs_naive": 0.05499789598230054
+    }
+  }
 }

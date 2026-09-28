@@ -1,6 +1,6 @@
 # Evaluation — ka_ghats
 
-Models trained on: `ka_ghats` · generated 2026-09-27T11:47:41
+Models trained on: `ka_ghats` · generated 2026-09-28T12:46:51
 
 Skill = 1 - MAE(model)/MAE(naive block copy). Positive beats naive. CI is a 90% cluster bootstrap (blocks at T1, gauges at T2). Coverage is for the published 80% interval (target ≈ 0.80).
 
@@ -33,7 +33,7 @@ Rainfall occurrence: Brier 0.038 vs naive-block 0.056, Brier skill vs climatolog
 
 | Variable | n | MAE model | MAE naive | Skill | 90% CI | Served skill* | Coverage 80% | Verdict |
 |---|---:|---:|---:|---:|---|---:|---:|---|
-| Rainfall (mm) | 316 | 12.14 | 12.14 | 0.000 | [0.000, 0.000] | - | 0.81 | does NOT beat naive (only 3 gauges: significance not testable) |
+| Rainfall (mm) | 316 | 12.14 | 12.14 | 0.000 | [0.000, 0.000] | - | 0.78 | does NOT beat naive (only 3 gauges: significance not testable) |
 | Max temperature (°C) | 765 | 1.85 | 1.88 | 0.015 | [-0.035, 0.081] | - | 0.86 | beats naive (only 3 gauges: significance not testable) |
 | Min temperature (°C) | 836 | 1.15 | 1.25 | 0.087 | [0.024, 0.157] | - | 0.81 | beats naive (only 3 gauges: significance not testable) |
 
@@ -49,4 +49,11 @@ Rainfall occurrence: Brier 0.256 vs naive-block 0.313, Brier skill vs climatolog
 
 ## T2 (historical) — real gauges, 1960 monsoon (~100 gauges, never used in training)
 
-_Not evaluable for this region (no data)._
+| Variable | n | MAE model | MAE naive | Skill | 90% CI | Served skill* | Coverage 80% | Verdict |
+|---|---:|---:|---:|---:|---|---:|---:|---|
+| Rainfall (mm) | 12,149 | 11.15 | 11.15 | 0.000 | [0.000, 0.000] | - | 0.85 | does NOT beat naive |
+
+*Served skill: after block-mean reconciliation, i.e. the value the API actually returns (T1 only; gauges are not a block).
+- **Rainfall: block value served.** On validation data the served estimate did not beat the block value (skill -0.132), so FieldCast serves the official block value as the point estimate and uses the model for the range and the rain chance. The model alone would have scored 0.048 here.
+
+Rainfall occurrence: Brier 0.285 vs naive-block 0.350, Brier skill vs climatology -0.150 (wet-day base rate 0.45).

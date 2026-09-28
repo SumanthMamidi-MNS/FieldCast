@@ -1,6 +1,6 @@
 # Evaluation — mh_ghats
 
-Models trained on: `mh_ghats` · generated 2026-09-27T11:45:00
+Models trained on: `mh_ghats` · generated 2026-09-28T12:12:24
 
 Skill = 1 - MAE(model)/MAE(naive block copy). Positive beats naive. CI is a 90% cluster bootstrap (blocks at T1, gauges at T2). Coverage is for the published 80% interval (target ≈ 0.80).
 
@@ -11,7 +11,7 @@ Skill = 1 - MAE(model)/MAE(naive block copy). Positive beats naive. CI is a 90% 
 | Rainfall (mm) | 110,105 | 0.85 | 0.85 | 0.000 | [0.000, 0.000] | 0.000 | 0.92 | does NOT beat naive |
 | Max temperature (°C) | 110,105 | 0.37 | 0.66 | 0.441 | [0.401, 0.476] | 0.444 | 0.91 | beats naive (significant) |
 | Min temperature (°C) | 110,105 | 0.41 | 0.58 | 0.283 | [0.240, 0.324] | 0.286 | 0.89 | beats naive (significant) |
-| Relative humidity (%) | 110,105 | 1.57 | 1.95 | 0.194 | [0.156, 0.227] | 0.197 | 0.90 | beats naive (significant) |
+| Relative humidity (%) | 110,105 | 1.57 | 1.95 | 0.194 | [0.157, 0.227] | 0.197 | 0.90 | beats naive (significant) |
 | Wind speed (km/h) | 110,105 | 1.32 | 1.39 | 0.046 | [0.036, 0.056] | 0.045 | 0.92 | beats naive (significant) |
 
 *Served skill: after block-mean reconciliation, i.e. the value the API actually returns (T1 only; gauges are not a block).
@@ -33,7 +33,7 @@ Rainfall occurrence: Brier 0.026 vs naive-block 0.043, Brier skill vs climatolog
 
 | Variable | n | MAE model | MAE naive | Skill | 90% CI | Served skill* | Coverage 80% | Verdict |
 |---|---:|---:|---:|---:|---|---:|---:|---|
-| Rainfall (mm) | 471 | 12.18 | 12.18 | 0.000 | [0.000, 0.000] | - | 0.80 | does NOT beat naive (only 4 gauges: significance not testable) |
+| Rainfall (mm) | 471 | 12.18 | 12.18 | 0.000 | [0.000, 0.000] | - | 0.82 | does NOT beat naive (only 4 gauges: significance not testable) |
 | Max temperature (°C) | 619 | 1.10 | 1.64 | 0.329 | [0.086, 0.448] | - | 0.89 | beats naive (only 4 gauges: significance not testable) |
 | Min temperature (°C) | 1,270 | 1.42 | 1.72 | 0.176 | [0.019, 0.303] | - | 0.74 | beats naive (only 4 gauges: significance not testable) |
 
@@ -49,4 +49,11 @@ Rainfall occurrence: Brier 0.225 vs naive-block 0.293, Brier skill vs climatolog
 
 ## T2 (historical) — real gauges, 1960 monsoon (~100 gauges, never used in training)
 
-_Not evaluable for this region (no data)._
+| Variable | n | MAE model | MAE naive | Skill | 90% CI | Served skill* | Coverage 80% | Verdict |
+|---|---:|---:|---:|---:|---|---:|---:|---|
+| Rainfall (mm) | 11,709 | 9.67 | 9.67 | 0.000 | [0.000, 0.000] | - | 0.82 | does NOT beat naive |
+
+*Served skill: after block-mean reconciliation, i.e. the value the API actually returns (T1 only; gauges are not a block).
+- **Rainfall: block value served.** On validation data the served estimate did not beat the block value (skill -0.074), so FieldCast serves the official block value as the point estimate and uses the model for the range and the rain chance. The model alone would have scored 0.055 here.
+
+Rainfall occurrence: Brier 0.245 vs naive-block 0.310, Brier skill vs climatology -0.019 (wet-day base rate 0.40).
