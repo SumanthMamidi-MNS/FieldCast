@@ -48,7 +48,7 @@ the input to Round 2.
 - [x] Runtime-only dependencies (83 MB) vs pipeline extra; import-boundary test
 - [x] `vercel.json`, `.vercelignore`, `[tool.vercel] entrypoint`, `.python-version`
 - [x] Verified in a clean runtime-only environment: 57 ms cold / 13 ms warm per forecast
-- [ ] First deployment (owner's Vercel account)
+- [x] Deployment config is ready (vercel.json, runtime-only deps); the owner chose not to host a live deployment
 
 ### D. Release
 - [x] docs/frontend.md and docs/backend.md knowledge docs
@@ -60,7 +60,6 @@ the input to Round 2.
 
 ---
 
-## Next up
-1. Owner: first Vercel deployment; add the live link to the README and GitHub About.
-2. Optional: when the 2019-20 monsoons are cached, retrain both states on all
-   five seasons, re-evaluate, re-export and update the README numbers.
+## Status
+Complete. Optional future work: retrain on the 2019-20 monsoons, host a live
+deployment (the repository is ready for Vercel's FastAPI preset).

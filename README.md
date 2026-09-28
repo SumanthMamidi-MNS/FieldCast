@@ -77,7 +77,7 @@ the panchayat value **and** how far to trust it.
 ## The dashboard
 
 <p align="center">
-  <img src="docs/screenshots/demo.gif" alt="FieldCast demo: switching variables across the 257 gram panchayats of Patan block, opening a panchayat's farm advice, then the evidence page" width="100%">
+  <a href="docs/screenshots/forecast-map.jpg"><img src="docs/screenshots/forecast-map.jpg" alt="FieldCast dashboard: maximum temperature across the 257 gram panchayats of Patan block" width="100%"></a>
   <br>
   <sub>Patan block, 257 gram panchayats. Colour is the difference from the block forecast; hatching marks where confidence is low.</sub>
 </p>
