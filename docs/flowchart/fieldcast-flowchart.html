@@ -64,15 +64,16 @@
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
 
   /* Right column */
-  .measured { margin-top: 44px; background: var(--white); border: 2px solid var(--ink); border-radius: 16px; padding: 26px 34px 20px; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 40px; }
-  .measured h3 { font: 400 30px/1.1 "DM Serif Display", Georgia, serif; text-align: center; }
-  .measured .kicker { text-align: center; font: 600 11.5px/1 Inter; letter-spacing: 2.5px; color: var(--muted); margin: 8px 0 12px; }
-  .stat { display: grid; grid-template-columns: 125px 1fr; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #e3e2da; }
-  .stat .n { font: 400 42px/1 "DM Serif Display", Georgia, serif; color: var(--blue-ink); }
-  .stat .d { font-size: 14px; color: var(--ink); }
-  .stat .d small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .note { margin-top: 14px; text-align: center; font: italic 15px/1.4 "DM Serif Display", Georgia, serif; color: var(--muted); }
+  .measured { margin-top: 40px; background: var(--white); border: 2px solid var(--ink); border-radius: 16px; padding: 20px 30px 18px; }
+  .measured-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
+  .measured h3 { font: 400 28px/1.1 "DM Serif Display", Georgia, serif; }
+  .measured .kicker { font: 600 11.5px/1 Inter; letter-spacing: 2.5px; color: var(--muted); }
+  .stats { display: grid; grid-template-columns: repeat(6, 1fr); border-top: 1px solid #e3e2da; }
+  .stat { padding: 14px 14px 4px; border-left: 1px solid #e3e2da; }
+  .stat:first-child { border-left: 0; padding-left: 0; }
+  .stat .n { font: 400 40px/1 "DM Serif Display", Georgia, serif; color: var(--blue-ink); }
+  .stat .d { margin-top: 8px; font-size: 13.5px; line-height: 1.35; color: var(--ink); }
+  .stat .d small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 4px; }
 
   .stop { position: absolute; left: 0; right: 0; background: var(--red-bg); border: 1.5px solid var(--red-bd);
           border-radius: 14px; padding: 16px 22px; text-align: center; }
@@ -212,17 +213,18 @@
   </div>
 
   <section class="measured" id="measured">
-    <h3>Measured, not claimed</h3>
-    <div class="kicker">EVALUATION RESULTS</div>
-    <div class="stats">
-      <div class="stat"><div class="n" data-k="rain">40%</div><div class="d">better rain / no-rain call than the block forecast<small data-k="rain-note">Brier 0.026 vs 0.043 · Maharashtra, held-out seasons</small></div></div>
-      <div class="stat"><div class="n" data-k="tmax">+0.44</div><div class="d">max-temperature skill over the block value<small data-k="tmax-note">Maharashtra · +0.42 Karnataka · 1 = perfect, 0 = no better</small></div></div>
-      <div class="stat"><div class="n" data-k="cov">82%</div><div class="d">of rainy days at ~100 real gauges inside the published range<small data-k="cov-note">target 80% · calibrated on 1958, tested on 1960 · Karnataka 85%</small></div></div>
-      <div class="stat"><div class="n" data-k="gauges">21%</div><div class="d">better rain / no-rain call at ~100 real rain gauges<small data-k="gauges-note">1960 monsoon · 97 gauges never used in training · Karnataka 19% (100 gauges)</small></div></div>
-      <div class="stat"><div class="n">0</div><div class="d">served numbers worse than the official forecast<small>a variable that loses on validation serves the block value</small></div></div>
-      <div class="stat"><div class="n">100 ms</div><div class="d">for a 257-panchayat block<small>numpy-only serving · 53 KB gzipped response</small></div></div>
+    <div class="measured-head">
+      <h3>Measured, not claimed</h3>
+      <span class="kicker">RESULTS ON SEASONS AND BLOCKS THE MODEL NEVER SAW</span>
     </div>
-    <p class="note">Every number is reproducible from reports/ — nothing is tuned on what it is scored on.</p>
+    <div class="stats">
+      <div class="stat"><div class="n">40%</div><div class="d">lower rain / no-rain error than the block forecast<small>Karnataka 32%</small></div></div>
+      <div class="stat"><div class="n">44%</div><div class="d">lower max-temperature error<small>Karnataka 42%</small></div></div>
+      <div class="stat"><div class="n">21%</div><div class="d">better rain calls at ~100 real gauges<small>1960 monsoon · Karnataka 19%</small></div></div>
+      <div class="stat"><div class="n">82%</div><div class="d">of rainy days inside the 80% range<small>target 80% · Karnataka 85%</small></div></div>
+      <div class="stat"><div class="n">0</div><div class="d">served values worse than the official forecast<small>on validation data</small></div></div>
+      <div class="stat"><div class="n">100 ms</div><div class="d">to serve a 257-panchayat block<small>numpy-only API</small></div></div>
+    </div>
   </section>
 
   <footer>
