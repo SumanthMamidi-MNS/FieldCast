@@ -177,6 +177,8 @@ better. 90% confidence intervals come from cluster bootstraps.
 
 ## Getting started
 
+> **One-click launch (Windows):** After completing setup, double-click `start.bat` at the project root — it starts the server and opens the app in your browser automatically.
+
 ```bash
 python -m venv .venv
 .venv/Scripts/python -m pip install -e ".[serve,pipeline,dev]"   # .venv/bin/python on macOS/Linux
