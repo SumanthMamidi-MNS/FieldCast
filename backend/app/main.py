@@ -15,7 +15,7 @@ import os
 from datetime import date as Date
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -183,6 +183,12 @@ def evaluation(region: str = Query(PRIMARY_REGION)) -> list[BaselineComparison]:
 def evaluation_reports() -> dict:
     """Every committed evaluation report, keyed by file stem, for the Evidence page."""
     return rt.evaluation_reports()
+
+
+@app.websocket("/{path:path}")
+async def _ws_reject(websocket: WebSocket, path: str = "") -> None:
+    """Gracefully close unsolicited WebSocket connections before they reach StaticFiles."""
+    await websocket.close(code=1000)
 
 
 # --------------------------------------------------------------------------
