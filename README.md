@@ -177,7 +177,7 @@ better. 90% confidence intervals come from cluster bootstraps.
 
 ## Getting started
 
-> **One-click launch (Windows):** After completing setup, double-click `start.bat` at the project root — it starts the server and opens the app in your browser automatically.
+> **One-click startup (Windows):** Double-click `start.bat` at the project root. It validates system prerequisites (**Python 3.11+**, and **Node.js 18+** if frontend assets need to be built), sets up the local virtual environment (`.venv`), installs dependencies, builds the frontend dashboard if missing, launches the server, and automatically opens the application in your default browser.
 
 ```bash
 python -m venv .venv
